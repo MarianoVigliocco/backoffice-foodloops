@@ -12,12 +12,12 @@ const Sidebar: React.FC = () => {
   );
   return (
     <aside className="sidebar">
-      <div className="brand">🍊 FoodLoops BackOffice</div>
+      <div className="brand">FoodLoops BackOffice</div>
       <nav className="nav" style={{display:'grid', gap:6}}>
-        {item('/', 'Dashboard', <span>📊</span>)}
-        {item('/users', 'Usuarios', <span>👤</span>)}
-        {item('/recipes', 'Recetas', <span>🍽️</span>)}
-        {item('/reports', 'Reportes', <span>📑</span>)}
+        {item('/', 'Dashboard', <span></span>)}
+        {item('/users', 'Usuarios', <span></span>)}
+        {item('/recipes', 'Recetas', <span></span>)}
+        {item('/reports', 'Reportes', <span></span>)}
       </nav>
     </aside>
   );

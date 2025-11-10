@@ -1,0 +1,312 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
+.fl-recipes-root {
+  padding: 24px 32px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1F2933;
+}
+
+/* Header */
+.fl-recipes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.fl-recipes-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #dee1ed;
+  margin: 0;
+}
+
+.fl-recipes-subtitle {
+  font-size: 13px;
+  color: #7C8AA0;
+  margin-top: 4px;
+}
+
+.fl-recipes-meta {
+  text-align: right;
+  font-size: 11px;
+  color: #9AA5B1;
+}
+
+.fl-recipes-meta-label {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.fl-recipes-meta-value {
+  font-weight: 600;
+  color: #383E56;
+}
+
+/* Search */
+.fl-recipes-search-wrapper {
+  margin-bottom: 12px;
+}
+
+.fl-recipes-search-card {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.fl-recipes-search-bar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fl-recipes-input {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 253, 0.26);
+  font-size: 13px;
+  background-color: #F9FAFB;
+  color: #111827;
+  outline: none;
+  transition: all 0.16s ease;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.fl-recipes-input::placeholder {
+  color: #9CA3AF;
+}
+
+.fl-recipes-input:focus {
+  border-color: #FF6F00;
+  box-shadow: 0 0 0 1px rgba(255, 111, 0, 0.06);
+  background-color: #FFFFFF;
+}
+
+/* Card base */
+.fl-card {
+  background-color: #FFFFFF;
+  border-radius: 14px;
+  padding: 14px 16px 12px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(148, 163, 253, 0.06);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Tabla principal */
+.fl-recipes-table-card {
+  margin-top: 6px;
+}
+
+.fl-recipes-table-wrapper {
+  margin-top: 4px;
+  overflow-x: auto;
+}
+
+.fl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.fl-table th,
+.fl-table td {
+  padding: 8px 6px;
+  border-bottom: 1px solid rgba(148, 163, 253, 0.14);
+}
+
+.fl-table th {
+  font-weight: 600;
+  color: #d6d6d6;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fl-table td {
+  color: #b4b4b4;
+}
+
+/* Column sizing */
+.fl-recipes-col-id {
+  width: 60px;
+}
+
+.fl-recipes-col-title {
+  min-width: 180px;
+}
+
+.fl-recipes-col-kcal {
+  width: 90px;
+  font-size: 12px;
+}
+
+.fl-recipes-col-diff {
+  width: 90px;
+  font-size: 12px;
+}
+
+.fl-recipes-col-source {
+  min-width: 140px;
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.fl-recipes-col-date {
+  width: 110px;
+  font-size: 12px;
+}
+
+.fl-recipes-th-actions,
+.fl-recipes-col-actions {
+  width: 110px;
+  text-align: right;
+}
+
+/* Empty */
+.fl-recipes-table-empty {
+  padding: 16px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 13px;
+}
+
+/* Alert */
+.fl-recipes-alert-error {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  background-color: #FEE2E2;
+  color: #B91C1C;
+}
+
+/* Botones */
+.fl-recipes-btn {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 7px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.16s ease;
+}
+
+.fl-recipes-btn-primary {
+  background-color: #FF6F00;
+  color: #FFFFFF;
+  font-weight: 500;
+  box-shadow: 0 4px 10px rgba(255, 111, 0, 0.18);
+}
+
+.fl-recipes-btn-primary:hover {
+  background-color: #E65F00;
+}
+
+.fl-recipes-btn-primary:disabled {
+  opacity: 0.5;
+  box-shadow: none;
+  cursor: default;
+}
+
+.fl-recipes-btn-outline {
+  background-color: transparent;
+  color: #FF6F00;
+  border: 1px solid rgba(255, 111, 0, 0.5);
+}
+
+.fl-recipes-btn-outline:hover:not(:disabled) {
+  background-color: rgba(255, 111, 0, 0.06);
+}
+
+.fl-recipes-btn-outline:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fl-recipes-btn-ghost {
+  background-color: transparent;
+  color: #9CA3AF;
+  padding: 4px 10px;
+  font-size: 11px;
+  align-items: left;
+  border-radius: 999px;
+  border: 1px solid rgba(156, 163, 175, 0.28);
+}
+
+.fl-recipes-btn-ghost:hover {
+  color: #FF6F00;
+  border-color: rgba(255, 111, 0, 0.5);
+}
+
+/* Paginación */
+.fl-recipes-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fl-recipes-pagination-info {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.fl-recipes-pagination-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Card edición */
+.fl-recipes-edit-card {
+  margin-top: 12px;
+}
+
+.fl-recipes-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.fl-recipes-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fl-recipes-label {
+  font-size: 10px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fl-recipes-edit-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.fl-recipes-btn-cancel {
+  background-color: #283147;
+  color: #E5E7EB;
+}
+
+.fl-recipes-btn-cancel:hover {
+  background-color: #111827;
+}
