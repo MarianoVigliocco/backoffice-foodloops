@@ -7,7 +7,7 @@ const pageSize = 20;
 
 const Recipes: React.FC = () => {
   const [rows, setRows] = React.useState<any[]>([]);
-  const [q, setQ] = React.useState(''); // término que se manda a la API
+  const q = '';
   const [page, setPage] = React.useState(1);
   const [total, setTotal] = React.useState(0);
   const [editing, setEditing] = React.useState<any | null>(null);
@@ -41,16 +41,6 @@ const Recipes: React.FC = () => {
   React.useEffect(() => {
     loadRecipes(q, page);
   }, [q, page, loadRecipes]);
-
-  const onSearch = () => {
-    // Si estás en otra página, solo reseteamos a 1 y el useEffect se encarga
-    if (page !== 1) {
-      setPage(1);
-      return;
-    }
-    // Si ya estás en la página 1, forzamos recarga con el q actual
-    loadRecipes(q, 1);
-  };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 

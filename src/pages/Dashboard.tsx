@@ -78,6 +78,23 @@ const Dashboard: React.FC = () => {
     return `${Math.round((value / total) * 100)}%`;
   };
 
+  const tooltipContentStyle: React.CSSProperties = {
+    backgroundColor: 'var(--surface-elevated)',
+    borderRadius: 10,
+    border: '1px solid var(--border-strong)',
+    boxShadow: 'var(--shadow-md)',
+    padding: 9,
+  };
+  const tooltipLabelStyle: React.CSSProperties = {
+    color: 'var(--text)',
+    fontSize: 10,
+    fontWeight: 700,
+  };
+  const tooltipItemStyle: React.CSSProperties = {
+    color: 'var(--text-secondary)',
+    fontSize: 10,
+  };
+
   return (
     <div className="fl-dashboard-root">
       <header className="fl-dashboard-header">
@@ -138,34 +155,21 @@ const Dashboard: React.FC = () => {
             {hasRecipesPerDay ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={data.recipes_per_day_14}>
-                  <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#6B7280' }} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 10,
-                      border: '1px solid rgba(148,163,253,0.4)',
-                      boxShadow: '0 8px 20px rgba(15,23,42,0.12)',
-                      padding: 8,
-                    }}
-                    labelStyle={{
-                      color: '#111827',
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                    itemStyle={{
-                      color: '#111827',
-                      fontSize: 11,
-                    }}
-                    cursor={{ stroke: '#E5E7EB', strokeWidth: 1 }}
+                    contentStyle={tooltipContentStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
+                    cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="count"
-                    stroke="#FF6F00"
+                    stroke="var(--accent)"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                     activeDot={{ r: 5 }}
@@ -191,7 +195,7 @@ const Dashboard: React.FC = () => {
                 >
                   <XAxis
                     dataKey="name"
-                    tick={{ fontSize: 10, fill: '#6B7280' }}
+                    tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
                     interval={0}
                     angle={-25}
                     textAnchor="end"
@@ -199,24 +203,18 @@ const Dashboard: React.FC = () => {
                   />
                   <YAxis
                     allowDecimals={false}
-                    tick={{ fontSize: 11, fill: '#6B7280' }}
+                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                   />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#FFFFFF',
-                      borderRadius: 10,
-                      border: '1px solid rgba(148,163,253,0.4)',
-                      boxShadow: '0 8px 20px rgba(15,23,42,0.12)',
-                      padding: 8,
-                    }}
-                    labelStyle={{ color: '#111827', fontSize: 11, fontWeight: 600 }}
-                    itemStyle={{ color: '#111827', fontSize: 11 }}
-                    cursor={{ fill: 'rgba(249,250,251,0.9)' }}
+                    contentStyle={tooltipContentStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
+                    cursor={{ fill: 'var(--surface-hover)' }}
                   />
                   <Bar
                     dataKey="uses"
                     radius={[4, 4, 0, 0]}
-                    fill="#FF6F00"
+                    fill="var(--accent)"
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -230,7 +228,7 @@ const Dashboard: React.FC = () => {
 
         {/* Estilos de alimentación - tabla */}
         <Card
-          className="fl-card span-4"
+          className="fl-card fl-table-card span-4"
           title="Estilos de alimentación declarados"
         >
           {hasDiets ? (
@@ -263,7 +261,7 @@ const Dashboard: React.FC = () => {
 
         {/* Alergias - tabla */}
         <Card
-          className="fl-card span-4"
+          className="fl-card fl-table-card span-4"
           title="Alergias reportadas por usuarios"
         >
           {hasAllergies ? (
@@ -295,13 +293,13 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Recetas más guardadas */}
-        <Card className="fl-card span-8" title="Recetas más guardadas">
+        <Card className="fl-card fl-table-card span-4" title="Recetas más guardadas">
           {hasTopSaved ? (
             <table className="fl-table">
               <thead>
                 <tr>
                   <th>Receta</th>
-                  <th>Guardados</th>
+                  <th className="fl-table-cell-right">Guardados</th>
                 </tr>
               </thead>
               <tbody>

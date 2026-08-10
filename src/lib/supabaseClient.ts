@@ -10,6 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     },
 });
 
+export async function getAccessToken(): Promise<string | null> {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
+}
+
 // ❗ IMPORTANTE: usar .supabase.co -> .functions.supabase.co
 export const EDGE_BASE = supabaseUrl.replace(
     '.supabase.co',

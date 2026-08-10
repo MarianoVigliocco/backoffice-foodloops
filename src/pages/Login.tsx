@@ -1,6 +1,7 @@
 import React from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
@@ -17,16 +18,30 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div style={{height:'100%', display:'grid', placeItems:'center'}}>
-      <form onSubmit={submit} className="card" style={{width:360}}>
-        <h3>Iniciar sesión</h3>
-        <div style={{display:'grid', gap:10}}>
-          <input className="input" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-          <input className="input" type="password" placeholder="Contraseña" value={pass} onChange={e=>setPass(e.target.value)} />
-          {err && <div className="badge" style={{color:'#ffb4a6', borderColor:'#3a1f1f'}}>⚠️ {err}</div>}
-          <button className="btn" type="submit">Entrar</button>
+    <div className="login-shell">
+      <div className="login-theme-toggle"><ThemeToggle /></div>
+      <div className="login-ambient login-ambient--one" />
+      <div className="login-ambient login-ambient--two" />
+
+      <main className="login-card">
+        <div className="login-brand">
+          <span className="brand-mark brand-mark--large">FL</span>
+          <div><strong>FoodLoops</strong><small>Backoffice</small></div>
         </div>
-      </form>
+        <div className="login-heading">
+          <h1>Bienvenido</h1>
+          <p>Ingresá con tu cuenta administrativa para continuar.</p>
+        </div>
+        <form onSubmit={submit} className="login-form">
+          <label htmlFor="login-email">Email</label>
+          <input id="login-email" className="input" type="email" placeholder="nombre@empresa.com" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required />
+          <label htmlFor="login-password">Contraseña</label>
+          <input id="login-password" className="input" type="password" placeholder="Ingresá tu contraseña" value={pass} onChange={e=>setPass(e.target.value)} autoComplete="current-password" required />
+          {err && <div className="form-alert" role="alert">{err}</div>}
+          <button className="btn login-submit" type="submit">Iniciar sesión</button>
+        </form>
+        <p className="login-security">Acceso seguro gestionado por Supabase</p>
+      </main>
     </div>
   );
 };

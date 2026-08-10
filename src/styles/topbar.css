@@ -1,76 +1,40 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
-
 .fl-topbar {
   position: sticky;
   top: 0;
   z-index: 40;
+  min-height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
-  border-bottom: 1px solid rgba(148, 163, 253, 0.10);
-  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  gap: 20px;
+  padding: 11px 28px;
+  background: var(--topbar-bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
-.fl-topbar-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.fl-topbar-logo-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: #FF6F00;
-}
-
-.fl-topbar-brand {
-  font-size: 13px;
-  font-weight: 600;
-  color: #383E56;
-}
-
-.fl-topbar-separator {
-  font-size: 11px;
-  color: #9CA3AF;
-}
-
-.fl-topbar-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: #6B7280;
-}
-
-.fl-topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.fl-topbar-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fl-topbar-eyebrow { color: var(--text-faint); font-size: 8px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
+.fl-topbar-title { margin: 0; color: var(--text); font-size: 15px; font-weight: 650; letter-spacing: -0.015em; }
+.fl-topbar-right { display: flex; align-items: center; gap: 9px; }
 
 .fl-topbar-btn-logout {
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: none;
-  outline: none;
+  min-height: 34px;
+  padding: 6px 13px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 650;
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 500;
-  font-family: 'Montserrat', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #FF6F00;
-  color: #ffffff;
-  box-shadow: 0 4px 10px rgba(255, 111, 0, 0.18);
-  transition: all 0.18s ease-in-out;
+  transition: color 150ms ease, background-color 150ms ease, border-color 150ms ease;
 }
+.fl-topbar-btn-logout:hover { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 24%, transparent); }
 
-.fl-topbar-btn-logout:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(255, 111, 0, 0.28);
-}
-
-.fl-topbar-btn-logout:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(255, 111, 0, 0.16);
+@media (max-width: 640px) {
+  .fl-topbar { padding: 10px 16px; }
+  .theme-toggle span:last-child { display: none; }
+  .theme-toggle { width: 36px; padding-inline: 0; justify-content: center; }
 }
