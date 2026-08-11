@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
+import foodLoopsLogo from '../assets/foodloops-logo.png';
 
 const Sidebar: React.FC = () => {
   const icons = {
@@ -18,9 +19,10 @@ const Sidebar: React.FC = () => {
   );
   return (
     <aside className="sidebar">
-      <div className="brand">
-        <span className="brand-mark">FL</span>
-        <span className="brand-copy"><strong>FoodLoops</strong><small>Backoffice</small></span>
+      <div className="brand" aria-label="FoodLoops Backoffice">
+        <span className="brand-logo-panel brand-logo-panel--sidebar">
+          <img className="brand-logo brand-logo--sidebar" src={foodLoopsLogo} alt="FoodLoops" />
+        </span>
       </div>
       <div className="sidebar-section-label">Administración</div>
       <nav className="nav">

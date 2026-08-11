@@ -2,6 +2,7 @@ import React from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle';
+import foodLoopsLogo from '../assets/foodloops-logo.png';
 
 const Login: React.FC = () => {
   const [email, setEmail] = React.useState('');
@@ -25,8 +26,9 @@ const Login: React.FC = () => {
 
       <main className="login-card">
         <div className="login-brand">
-          <span className="brand-mark brand-mark--large">FL</span>
-          <div><strong>FoodLoops</strong><small>Backoffice</small></div>
+          <span className="brand-logo-panel brand-logo-panel--login">
+            <img className="brand-logo brand-logo--login" src={foodLoopsLogo} alt="FoodLoops" />
+          </span>
         </div>
         <div className="login-heading">
           <h1>Bienvenido</h1>
@@ -40,7 +42,6 @@ const Login: React.FC = () => {
           {err && <div className="form-alert" role="alert">{err}</div>}
           <button className="btn login-submit" type="submit">Iniciar sesión</button>
         </form>
-        <p className="login-security">Acceso seguro gestionado por Supabase</p>
       </main>
     </div>
   );
