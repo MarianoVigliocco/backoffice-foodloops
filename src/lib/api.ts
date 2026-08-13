@@ -3,11 +3,28 @@ import { EDGE_BASE, supabase } from './supabaseClient';
 
 export type MetricResponse = {
     now: string;
+    range: {
+        from: string;
+        to_exclusive: string;
+        timezone: string;
+        days: number;
+    };
+    active_users: number;
+    new_users: number;
+    recipes_created: number;
+    recipes_saved: number;
+    recipes_per_day: { day: string; count: number }[];
     dau: number;
     mau: number;
     new_users_7d: number;
     recipes_7d: number;
     top_tags: { name: string; uses: number }[];
+    top_source_authors: {
+        username: string;
+        platform: 'Instagram' | 'TikTok';
+        recipes: number;
+        saves: number;
+    }[];
     top_saved_recipes: { id_recipe: number; title: string; saves: number }[];
     recipes_per_day_14: { day: string; count: number }[];
     diets_distribution: { name: string; users: number }[];
@@ -32,9 +49,19 @@ async function authHeaders(extra: Record<string, string> = {}) {
 
 /* -------- METRICS -------- */
 
-export async function apiMetrics(): Promise<MetricResponse> {
+export async function apiMetrics(params?: {
+    from?: string;
+    to?: string;
+    timezone?: string;
+}): Promise<MetricResponse> {
+    const query = new URLSearchParams();
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.timezone) query.set('timezone', params.timezone);
+
     const headers = await authHeaders();
-    const r = await fetch(`${EDGE_BASE}/admin-metrics`, {
+    const suffix = query.size ? `?${query.toString()}` : '';
+    const r = await fetch(`${EDGE_BASE}/admin-metrics${suffix}`, {
         method: 'GET',
         headers,
     });

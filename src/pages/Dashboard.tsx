@@ -1,6 +1,7 @@
 import React from 'react';
+import dayjs from 'dayjs';
 import Card from '../components/Card';
-import { apiMetrics } from '../lib/api';
+import { apiMetrics, type MetricResponse } from '../lib/api';
 import {
   LineChart,
   Line,
@@ -13,25 +14,70 @@ import {
 } from 'recharts';
 import '../styles/dashboard.css';
 
+type DateSelection = { from: string; to: string };
+type RangePreset = 7 | 30 | 90 | 'custom';
+
+const today = () => dayjs().format('YYYY-MM-DD');
+const rangeForDays = (days: number): DateSelection => ({
+  from: dayjs().subtract(days - 1, 'day').format('YYYY-MM-DD'),
+  to: today(),
+});
+
 const Dashboard: React.FC = () => {
-  const [data, setData] = React.useState<any | null>(null);
+  const [data, setData] = React.useState<MetricResponse | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [preset, setPreset] = React.useState<RangePreset>(30);
+  const [draftRange, setDraftRange] = React.useState<DateSelection>(() => rangeForDays(30));
+  const [appliedRange, setAppliedRange] = React.useState<DateSelection>(() => rangeForDays(30));
 
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiMetrics();
-        setData(res);
-      } catch (e: any) {
-        setErr(e.message || 'Error al cargar métricas');
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const loadMetrics = React.useCallback(async (selection: DateSelection, initial = false) => {
+    try {
+      setErr(null);
+      if (initial) setLoading(true);
+      else setRefreshing(true);
+
+      const from = dayjs(selection.from).startOf('day').toDate().toISOString();
+      const to = dayjs(selection.to).add(1, 'day').startOf('day').toDate().toISOString();
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Argentina/Cordoba';
+      const res = await apiMetrics({ from, to, timezone });
+      setData(res);
+    } catch (e: any) {
+      setErr(e.message || 'Error al cargar métricas');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  if (err) {
+  React.useEffect(() => {
+    loadMetrics(appliedRange, !data);
+  }, [appliedRange, loadMetrics]);
+
+  const applyPreset = (days: 7 | 30 | 90) => {
+    const next = rangeForDays(days);
+    setPreset(days);
+    setDraftRange(next);
+    setAppliedRange(next);
+  };
+
+  const applyCustomRange = () => {
+    const from = dayjs(draftRange.from);
+    const to = dayjs(draftRange.to);
+    if (!from.isValid() || !to.isValid() || to.isBefore(from, 'day')) {
+      setErr('Seleccioná un rango de fechas válido.');
+      return;
+    }
+    if (to.diff(from, 'day') + 1 > 366) {
+      setErr('El rango máximo es de 366 días.');
+      return;
+    }
+    setPreset('custom');
+    setAppliedRange(draftRange);
+  };
+
+  if (err && !data) {
     return (
       <div className="fl-dashboard-root">
         <div className="fl-error-badge">Error al cargar métricas: {err}</div>
@@ -48,7 +94,7 @@ const Dashboard: React.FC = () => {
   }
 
   const hasRecipesPerDay =
-    Array.isArray(data.recipes_per_day_14) && data.recipes_per_day_14.length > 0;
+    Array.isArray(data.recipes_per_day) && data.recipes_per_day.length > 0;
   const hasTopTags = Array.isArray(data.top_tags) && data.top_tags.length > 0;
   const hasDiets =
     Array.isArray(data.diets_distribution) && data.diets_distribution.length > 0;
@@ -58,6 +104,12 @@ const Dashboard: React.FC = () => {
   const hasTopSaved =
     Array.isArray(data.top_saved_recipes) &&
     data.top_saved_recipes.length > 0;
+  const hasTopAuthors =
+    Array.isArray(data.top_source_authors) && data.top_source_authors.length > 0;
+
+  const periodDays = dayjs(appliedRange.to).diff(dayjs(appliedRange.from), 'day') + 1;
+  const periodLabel = `${dayjs(appliedRange.from).format('DD/MM/YYYY')} – ${dayjs(appliedRange.to).format('DD/MM/YYYY')}`;
+  const chartDay = (value: string) => dayjs(value).format('DD/MM');
 
   const totalDietUsers = hasDiets
     ? data.diets_distribution.reduce(
@@ -104,63 +156,115 @@ const Dashboard: React.FC = () => {
             Visión general del uso, creación de recetas y comportamientos de la comunidad.
           </p>
         </div>
-        <div className="fl-dashboard-meta">
-          <span className="fl-dashboard-meta-label">Última actualización</span>
-          <span className="fl-dashboard-meta-value">
-            {new Date(data.now).toLocaleString('es-AR', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </span>
+        <div className="fl-dashboard-header-actions">
+          <div className="fl-dashboard-meta">
+            <span className="fl-dashboard-meta-label">Última actualización</span>
+            <span className="fl-dashboard-meta-value">
+              {new Date(data.now).toLocaleString('es-AR', {
+                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+              })}
+            </span>
+          </div>
         </div>
       </header>
 
+      <section className="fl-date-filter" aria-label="Rango de fechas de las estadísticas">
+        <div className="fl-date-filter-copy">
+          <span className="fl-date-filter-label">Período analizado</span>
+          <strong>{periodLabel}</strong>
+          {refreshing && <span className="fl-date-filter-loading">Actualizando…</span>}
+        </div>
+        <div className="fl-date-presets" aria-label="Rangos rápidos">
+          {([7, 30, 90] as const).map((days) => (
+            <button
+              key={days}
+              type="button"
+              className={`fl-date-preset ${preset === days ? 'active' : ''}`}
+              onClick={() => applyPreset(days)}
+              disabled={refreshing}
+            >
+              {days} días
+            </button>
+          ))}
+        </div>
+        <div className="fl-date-custom">
+          <label>
+            Desde
+            <input
+              type="date"
+              value={draftRange.from}
+              max={draftRange.to || today()}
+              onChange={(event) => {
+                setPreset('custom');
+                setDraftRange((current) => ({ ...current, from: event.target.value }));
+              }}
+            />
+          </label>
+          <label>
+            Hasta
+            <input
+              type="date"
+              value={draftRange.to}
+              min={draftRange.from}
+              max={today()}
+              onChange={(event) => {
+                setPreset('custom');
+                setDraftRange((current) => ({ ...current, to: event.target.value }));
+              }}
+            />
+          </label>
+          <button type="button" className="fl-date-apply" onClick={applyCustomRange} disabled={refreshing}>
+            Aplicar
+          </button>
+        </div>
+      </section>
+
+      {err && <div className="fl-error-badge fl-dashboard-inline-error">{err}</div>}
+
       <div className="fl-dashboard-grid">
         {/* KPIs */}
-        <Card className="fl-card fl-kpi span-3" title="Usuarios activos hoy (DAU)">
-          <div className="fl-kpi-value">{data.dau}</div>
+        <Card className="fl-card fl-kpi span-3" title="Usuarios activos">
+          <div className="fl-kpi-value">{data.active_users}</div>
           <div className="fl-kpi-label">
-            Usuarios únicos con actividad en las últimas 24 hs
+            Usuarios únicos con actividad en los {periodDays} días seleccionados
           </div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios activos (30 días)">
-          <div className="fl-kpi-value">{data.mau}</div>
+        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos">
+          <div className="fl-kpi-value">{data.new_users}</div>
           <div className="fl-kpi-label">
-            Usuarios únicos con sesión o evento en los últimos 30 días
+            Registros creados durante el período seleccionado
           </div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos (7 días)">
-          <div className="fl-kpi-value">{data.new_users_7d}</div>
-          <div className="fl-kpi-label">Registros creados en los últimos 7 días</div>
+        <Card className="fl-card fl-kpi span-3" title="Recetas creadas">
+          <div className="fl-kpi-value">{data.recipes_created}</div>
+          <div className="fl-kpi-label">Recetas incorporadas durante el período seleccionado</div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas creadas (7 días)">
-          <div className="fl-kpi-value">{data.recipes_7d}</div>
+        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas">
+          <div className="fl-kpi-value">{data.recipes_saved}</div>
           <div className="fl-kpi-label">
-            Recetas transcritas o generadas en los últimos 7 días
+            Guardados realizados durante el período seleccionado
           </div>
         </Card>
 
         {/* Recetas por día (14d) */}
         <Card
           className="fl-card span-8"
-          title="Recetas creadas por día (últimos 14 días)"
+          title="Recetas creadas por día"
         >
           <div className="fl-chart-wrapper">
             {hasRecipesPerDay ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.recipes_per_day_14}>
-                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <LineChart data={data.recipes_per_day}>
+                  <XAxis dataKey="day" tickFormatter={chartDay} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis
                     allowDecimals={false}
                     tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
                   />
                   <Tooltip
+                    labelFormatter={(value) => dayjs(String(value)).format('DD/MM/YYYY')}
                     contentStyle={tooltipContentStyle}
                     labelStyle={tooltipLabelStyle}
                     itemStyle={tooltipItemStyle}
@@ -178,7 +282,7 @@ const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             ) : (
               <div className="fl-empty">
-                Sin datos de recetas creadas en los últimos 14 días.
+                Sin datos de recetas creadas en el período seleccionado.
               </div>
             )}
           </div>
@@ -226,10 +330,41 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
+        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram">
+          {hasTopAuthors ? (
+            <table className="fl-table fl-authors-table">
+              <thead>
+                <tr>
+                  <th className="fl-authors-rank">#</th>
+                  <th>Autor</th>
+                  <th>Plataforma</th>
+                  <th className="fl-table-cell-right">Recetas</th>
+                  <th className="fl-table-cell-right">Guardados</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.top_source_authors.map((author, index) => (
+                  <tr key={`${author.platform}-${author.username.toLowerCase()}`}>
+                    <td className="fl-authors-rank">{index + 1}</td>
+                    <td className="fl-table-title-cell">@{author.username}</td>
+                    <td><span className={`fl-platform-badge fl-platform-${author.platform.toLowerCase()}`}>{author.platform}</span></td>
+                    <td className="fl-table-cell-right">{author.recipes}</td>
+                    <td className="fl-table-number-cell">{author.saves}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="fl-empty fl-empty-compact">
+              No hay autores identificados de TikTok o Instagram en este período.
+            </div>
+          )}
+        </Card>
+
         {/* Estilos de alimentación - tabla */}
         <Card
           className="fl-card fl-table-card span-4"
-          title="Estilos de alimentación declarados"
+          title="Estilos de alimentación declarados · Estado actual"
         >
           {hasDiets ? (
             <table className="fl-table fl-table-compact-1">
@@ -262,7 +397,7 @@ const Dashboard: React.FC = () => {
         {/* Alergias - tabla */}
         <Card
           className="fl-card fl-table-card span-4"
-          title="Alergias reportadas por usuarios"
+          title="Alergias reportadas por usuarios · Estado actual"
         >
           {hasAllergies ? (
             <table className="fl-table fl-table-compact">
