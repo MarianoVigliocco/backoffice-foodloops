@@ -75,11 +75,22 @@ export async function apiMetrics(params?: {
 
 /* -------- USERS -------- */
 
-export async function apiUsersList(params: { q?: string; page?: number; pageSize?: number }) {
+export type UserSortKey = 'id_user' | 'name' | 'email' | 'country' | 'created_at' | 'enabled';
+export type SortDirection = 'asc' | 'desc';
+
+export async function apiUsersList(params: {
+    q?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: UserSortKey;
+    sortDirection?: SortDirection;
+}) {
     const p = new URLSearchParams();
     if (params.q) p.set('q', params.q);
     if (params.page) p.set('page', String(params.page));
     if (params.pageSize) p.set('pageSize', String(params.pageSize));
+    if (params.sortBy) p.set('sortBy', params.sortBy);
+    if (params.sortDirection) p.set('sortDirection', params.sortDirection);
 
     const headers = await authHeaders();
     const r = await fetch(`${EDGE_BASE}/admin-users?${p.toString()}`, {
@@ -102,9 +113,9 @@ export async function apiUserToggle(id_user: number, enabled: boolean) {
         body: JSON.stringify({ id_user, enabled }),
     });
     if (!r.ok) {
-        const text = await r.text().catch(() => '');
-        console.error('admin-users toggle failed', r.status, text);
-        throw new Error('toggle failed');
+        const response = await r.json().catch(() => null);
+        console.error('admin-users toggle failed', r.status, response);
+        throw new Error(response?.error || 'No se pudo actualizar el usuario');
     }
     return r.json();
 }

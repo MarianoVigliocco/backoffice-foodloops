@@ -15,7 +15,6 @@ const Recipes: React.FC = () => {
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Función base para pedir recetas con valores explícitos
   const loadRecipes = React.useCallback(
     async (qValue: string, pageValue: number) => {
       try {
@@ -25,8 +24,8 @@ const Recipes: React.FC = () => {
         const res = await apiRecipesList({ q: qValue, page: pageValue, pageSize });
         setRows(res.data ?? []);
         setTotal(res.total ?? 0);
-      } catch (e: any) {
-        console.error('Recipes load error', e);
+      } catch (loadError: any) {
+        console.error('Recipes load error', loadError);
         setError('No se pudieron cargar las recetas');
         setRows([]);
         setTotal(0);
@@ -34,10 +33,9 @@ const Recipes: React.FC = () => {
         setLoading(false);
       }
     },
-    []
+    [],
   );
 
-  // Carga inicial + cuando cambian q o page
   React.useEffect(() => {
     loadRecipes(q, page);
   }, [q, page, loadRecipes]);
@@ -45,23 +43,26 @@ const Recipes: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const startEdit = (recipe: any) => {
+    if (editing?.id_recipe === recipe.id_recipe) {
+      setEditing(null);
+      return;
+    }
+
     setEditing({
       ...recipe,
       calories_per_serving_kcal:
-        recipe.calories_per_serving_kcal ??
-        recipe.calories ??
-        recipe.kcal ??
-        null,
+        recipe.calories_per_serving_kcal ?? recipe.calories ?? recipe.kcal ?? null,
     });
   };
 
   const save = async () => {
     if (!editing) return;
+
     try {
       setSaving(true);
       setError(null);
 
-      const payload: any = {
+      await apiRecipeUpdate({
         id_recipe: editing.id_recipe,
         title: editing.title?.trim() || null,
         difficulty: editing.difficulty || null,
@@ -70,24 +71,102 @@ const Recipes: React.FC = () => {
             ? Number(editing.calories_per_serving_kcal)
             : null,
         },
-      };
+      });
 
-      await apiRecipeUpdate(payload);
       setEditing(null);
       await loadRecipes(q, page);
-    } catch (e: any) {
-      console.error('Recipe save error', e);
-      setError(
-        'No se pudo guardar la receta. Revisá los datos e intentá nuevamente.'
-      );
+    } catch (saveError: any) {
+      console.error('Recipe save error', saveError);
+      setError('No se pudo guardar la receta. Revisá los datos e intentá nuevamente.');
     } finally {
       setSaving(false);
     }
   };
 
+  const inlineEditor = editing && (
+    <div className="fl-recipes-inline-editor">
+      <div className="fl-recipes-inline-header">
+        <div>
+          <span className="fl-recipes-inline-kicker">Edición rápida</span>
+          <h3>Editar receta #{editing.id_recipe}</h3>
+        </div>
+        <button
+          type="button"
+          className="fl-recipes-inline-close"
+          onClick={() => setEditing(null)}
+          aria-label="Cerrar editor"
+          disabled={saving}
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="fl-recipes-edit-grid">
+        <div className="fl-recipes-edit-field">
+          <label className="fl-recipes-label" htmlFor={`recipe-title-${editing.id_recipe}`}>
+            Título
+          </label>
+          <input
+            id={`recipe-title-${editing.id_recipe}`}
+            className="fl-recipes-input"
+            value={editing.title ?? ''}
+            onChange={(event) => setEditing({ ...editing, title: event.target.value })}
+            placeholder="Título de la receta"
+          />
+        </div>
+
+        <div className="fl-recipes-edit-field">
+          <label className="fl-recipes-label" htmlFor={`recipe-difficulty-${editing.id_recipe}`}>
+            Dificultad
+          </label>
+          <input
+            id={`recipe-difficulty-${editing.id_recipe}`}
+            className="fl-recipes-input"
+            value={editing.difficulty ?? ''}
+            onChange={(event) => setEditing({ ...editing, difficulty: event.target.value })}
+            placeholder="Ej: Fácil, Media, Difícil"
+          />
+        </div>
+
+        <div className="fl-recipes-edit-field">
+          <label className="fl-recipes-label" htmlFor={`recipe-kcal-${editing.id_recipe}`}>
+            Kcal/porción
+          </label>
+          <input
+            id={`recipe-kcal-${editing.id_recipe}`}
+            className="fl-recipes-input"
+            type="number"
+            value={editing.calories_per_serving_kcal ?? ''}
+            onChange={(event) => setEditing({
+              ...editing,
+              calories_per_serving_kcal: event.target.value ? Number(event.target.value) : null,
+            })}
+            placeholder="Ej: 420"
+          />
+        </div>
+      </div>
+
+      <div className="fl-recipes-edit-actions">
+        <button
+          className="fl-recipes-btn fl-recipes-btn-primary"
+          onClick={save}
+          disabled={saving}
+        >
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+        <button
+          className="fl-recipes-btn fl-recipes-btn-cancel"
+          onClick={() => setEditing(null)}
+          disabled={saving}
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="fl-recipes-root">
-      {/* Header */}
       <header className="fl-recipes-header">
         <div>
           <h1 className="fl-recipes-title">Recetas</h1>
@@ -101,13 +180,8 @@ const Recipes: React.FC = () => {
         </div>
       </header>
 
-      {/* Tabla de recetas */}
       <Card className="fl-card fl-recipes-table-card" title="Listado de recetas">
-        {error && (
-          <div className="fl-recipes-alert fl-recipes-alert-error">
-            {error}
-          </div>
-        )}
+        {error && <div className="fl-recipes-alert fl-recipes-alert-error">{error}</div>}
 
         <div className="fl-recipes-table-wrapper">
           <table className="fl-table fl-recipes-table">
@@ -125,9 +199,7 @@ const Recipes: React.FC = () => {
             <tbody>
               {loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="fl-recipes-table-empty">
-                    Cargando recetas...
-                  </td>
+                  <td colSpan={7} className="fl-recipes-table-empty">Cargando recetas...</td>
                 </tr>
               )}
 
@@ -139,134 +211,65 @@ const Recipes: React.FC = () => {
                 </tr>
               )}
 
-              {rows.map((r) => (
-                <tr key={r.id_recipe}>
-                  <td className="fl-recipes-col-id">{r.id_recipe}</td>
-                  <td className="fl-recipes-col-title">
-                    {r.title || '-'}
-                  </td>
-                  <td className="fl-recipes-col-kcal">
-                    {r.calories_per_serving_kcal ?? '-'}
-                  </td>
-                  <td className="fl-recipes-col-diff">
-                    {r.difficulty || '-'}
-                  </td>
-                  <td className="fl-recipes-col-source">
-                    {r.source_platform || r.source_username
-                      ? [r.source_platform, r.source_username]
-                        .filter(Boolean)
-                        .join(' · ')
-                      : '-'}
-                  </td>
-                  <td className="fl-recipes-col-date">
-                    {r.created_at ? String(r.created_at).slice(0, 10) : '-'}
-                  </td>
-                  <td className="fl-recipes-col-actions">
-                    <button
-                      className="fl-recipes-btn fl-recipes-btn-ghost"
-                      onClick={() => startEdit(r)}
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((recipe) => {
+                const isEditing = editing?.id_recipe === recipe.id_recipe;
+
+                return (
+                  <React.Fragment key={recipe.id_recipe}>
+                    <tr className={isEditing ? 'fl-recipes-row-is-editing' : undefined}>
+                      <td className="fl-recipes-col-id">{recipe.id_recipe}</td>
+                      <td className="fl-recipes-col-title">{recipe.title || '-'}</td>
+                      <td className="fl-recipes-col-kcal">{recipe.calories_per_serving_kcal ?? '-'}</td>
+                      <td className="fl-recipes-col-diff">{recipe.difficulty || '-'}</td>
+                      <td className="fl-recipes-col-source">
+                        {recipe.source_platform || recipe.source_username
+                          ? [recipe.source_platform, recipe.source_username].filter(Boolean).join(' · ')
+                          : '-'}
+                      </td>
+                      <td className="fl-recipes-col-date">
+                        {recipe.created_at ? String(recipe.created_at).slice(0, 10) : '-'}
+                      </td>
+                      <td className="fl-recipes-col-actions">
+                        <button
+                          className="fl-recipes-btn fl-recipes-btn-ghost"
+                          onClick={() => startEdit(recipe)}
+                        >
+                          {isEditing ? 'Cerrar' : 'Editar'}
+                        </button>
+                      </td>
+                    </tr>
+                    {isEditing && (
+                      <tr className="fl-recipes-editor-row">
+                        <td colSpan={7}>{inlineEditor}</td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
-        {/* Paginación */}
         <div className="fl-recipes-pagination">
-          <span className="fl-recipes-pagination-info">
-            Página {page} de {totalPages}
-          </span>
+          <span className="fl-recipes-pagination-info">Página {page} de {totalPages}</span>
           <div className="fl-recipes-pagination-actions">
             <button
               className="fl-recipes-btn fl-recipes-btn-outline"
               disabled={page <= 1}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               Anterior
             </button>
             <button
               className="fl-recipes-btn fl-recipes-btn-outline"
               disabled={page >= totalPages}
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             >
               Siguiente
             </button>
           </div>
         </div>
       </Card>
-
-      {/* Editor de receta */}
-      {editing && (
-        <Card
-          className="fl-card fl-recipes-edit-card"
-          title={`Editar receta #${editing.id_recipe}`}
-        >
-          <div className="fl-recipes-edit-grid">
-            <div className="fl-recipes-edit-field">
-              <label className="fl-recipes-label">Título</label>
-              <input
-                className="fl-recipes-input"
-                value={editing.title ?? ''}
-                onChange={(e) =>
-                  setEditing({ ...editing, title: e.target.value })
-                }
-                placeholder="Título de la receta"
-              />
-            </div>
-
-            <div className="fl-recipes-edit-field">
-              <label className="fl-recipes-label">Dificultad</label>
-              <input
-                className="fl-recipes-input"
-                value={editing.difficulty ?? ''}
-                onChange={(e) =>
-                  setEditing({ ...editing, difficulty: e.target.value })
-                }
-                placeholder="Ej: Fácil, Media, Difícil"
-              />
-            </div>
-
-            <div className="fl-recipes-edit-field">
-              <label className="fl-recipes-label">Kcal/porción</label>
-              <input
-                className="fl-recipes-input"
-                type="number"
-                value={editing.calories_per_serving_kcal ?? ''}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    calories_per_serving_kcal: e.target.value
-                      ? Number(e.target.value)
-                      : null,
-                  })
-                }
-                placeholder="Ej: 420"
-              />
-            </div>
-          </div>
-
-          <div className="fl-recipes-edit-actions">
-            <button
-              className="fl-recipes-btn fl-recipes-btn-primary"
-              onClick={save}
-              disabled={saving}
-            >
-              {saving ? 'Guardando...' : 'Guardar cambios'}
-            </button>
-            <button
-              className="fl-recipes-btn fl-recipes-btn-cancel"
-              onClick={() => setEditing(null)}
-              disabled={saving}
-            >
-              Cancelar
-            </button>
-          </div>
-        </Card>
-      )}
     </div>
   );
 };
