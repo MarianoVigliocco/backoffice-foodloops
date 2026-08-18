@@ -363,30 +363,37 @@ const Dashboard: React.FC = () => {
 
         {/* Estilos de alimentación - tabla */}
         <Card
-          className="fl-card fl-table-card span-4"
+          className="fl-card fl-table-card fl-scroll-table-card span-4"
           title="Estilos de alimentación declarados · Estado actual"
         >
           {hasDiets ? (
-            <table className="fl-table fl-table-compact-1">
-              <thead>
-                <tr>
-                  <th>Estilo</th>
-                  <th className="fl-table-cell-right">Usuarios</th>
-                  <th className="fl-table-cell-right">% usuarios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.diets_distribution.map((d: any) => (
-                  <tr key={d.name}>
-                    <td className="fl-table-title-cell">{d.name}</td>
-                    <td className="fl-table-cell-right">{d.users}</td>
-                    <td className="fl-table-cell-right">
-                      {formatPercent(d.users, totalDietUsers)}
-                    </td>
+            <div
+              className="fl-dashboard-table-scroll"
+              role="region"
+              aria-label="Estilos de alimentación declarados"
+              tabIndex={0}
+            >
+              <table className="fl-table fl-table-compact-1">
+                <thead>
+                  <tr>
+                    <th>Estilo</th>
+                    <th className="fl-table-cell-right">Usuarios</th>
+                    <th className="fl-table-cell-right">% usuarios</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.diets_distribution.map((d: any) => (
+                    <tr key={d.name}>
+                      <td className="fl-table-title-cell">{d.name}</td>
+                      <td className="fl-table-cell-right">{d.users}</td>
+                      <td className="fl-table-cell-right">
+                        {formatPercent(d.users, totalDietUsers)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="fl-empty">
               Sin preferencias de alimentación configuradas aún.
@@ -396,30 +403,37 @@ const Dashboard: React.FC = () => {
 
         {/* Alergias - tabla */}
         <Card
-          className="fl-card fl-table-card span-4"
+          className="fl-card fl-table-card fl-scroll-table-card span-4"
           title="Alergias reportadas por usuarios · Estado actual"
         >
           {hasAllergies ? (
-            <table className="fl-table fl-table-compact">
-              <thead>
-                <tr>
-                  <th>Alergia</th>
-                  <th className="fl-table-cell-right">Usuarios</th>
-                  <th className="fl-table-cell-right">% usuarios</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.allergies_distribution.map((a: any) => (
-                  <tr key={a.name}>
-                    <td className="fl-table-title-cell">{a.name}</td>
-                    <td className="fl-table-cell-right">{a.users}</td>
-                    <td className="fl-table-cell-right">
-                      {formatPercent(a.users, totalAllergyUsers)}
-                    </td>
+            <div
+              className="fl-dashboard-table-scroll"
+              role="region"
+              aria-label="Alergias reportadas por usuarios"
+              tabIndex={0}
+            >
+              <table className="fl-table fl-table-compact">
+                <thead>
+                  <tr>
+                    <th>Alergia</th>
+                    <th className="fl-table-cell-right">Usuarios</th>
+                    <th className="fl-table-cell-right">% usuarios</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.allergies_distribution.map((a: any) => (
+                    <tr key={a.name}>
+                      <td className="fl-table-title-cell">{a.name}</td>
+                      <td className="fl-table-cell-right">{a.users}</td>
+                      <td className="fl-table-cell-right">
+                        {formatPercent(a.users, totalAllergyUsers)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="fl-empty">
               Sin datos suficientes de alergias por ahora.
@@ -428,24 +442,31 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Recetas más guardadas */}
-        <Card className="fl-card fl-table-card span-4" title="Recetas más guardadas">
+        <Card className="fl-card fl-table-card fl-scroll-table-card span-4" title="Recetas más guardadas">
           {hasTopSaved ? (
-            <table className="fl-table">
-              <thead>
-                <tr>
-                  <th>Receta</th>
-                  <th className="fl-table-cell-right">Guardados</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.top_saved_recipes.map((r: any) => (
-                  <tr key={r.id_recipe}>
-                    <td className="fl-table-title-cell">{r.title}</td>
-                    <td className="fl-table-number-cell">{r.saves}</td>
+            <div
+              className="fl-dashboard-table-scroll"
+              role="region"
+              aria-label="Recetas más guardadas"
+              tabIndex={0}
+            >
+              <table className="fl-table">
+                <thead>
+                  <tr>
+                    <th>Receta</th>
+                    <th className="fl-table-cell-right">Guardados</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.top_saved_recipes.map((r: any) => (
+                    <tr key={r.id_recipe}>
+                      <td className="fl-table-title-cell">{r.title}</td>
+                      <td className="fl-table-number-cell">{r.saves}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="fl-empty">
               Cuando haya suficientes recetas guardadas, las vas a ver acá.
