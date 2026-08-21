@@ -1,5 +1,12 @@
+// @deno-types="npm:@types/nodemailer@8.0.1"
+import nodemailer from "npm:nodemailer@9.0.5";
+
 export type EmailConfig = {
-  apiKey: string;
+  host: string;
+  port: number;
+  secure: boolean;
+  username: string;
+  password: string;
   from: string;
   supportEmail: string;
 };
@@ -11,25 +18,45 @@ export type DeactivationEmailUser = {
 };
 
 type ReadEnv = (name: string) => string | undefined;
-type Fetcher = (
-  input: string | URL | Request,
-  init?: RequestInit,
-) => Promise<Response>;
+type MailMessage = ReturnType<typeof buildDeactivationEmail>;
+type MailTransport = {
+  sendMail: (message: MailMessage) => Promise<unknown>;
+  close?: () => void;
+};
+type TransportFactory = (config: EmailConfig) => MailTransport;
 
 type AccountStatus = "deactivated" | "reactivated";
 
 export function getEmailConfig(
   readEnv: ReadEnv = (name) => Deno.env.get(name),
 ): EmailConfig | null {
-  const apiKey = readEnv("RESEND_API_KEY")?.trim();
+  const host = readEnv("SMTP_HOST")?.trim();
+  const portText = readEnv("SMTP_PORT")?.trim() || "465";
+  const port = Number(portText);
+  const username = readEnv("SMTP_USER")?.trim();
+  const password = readEnv("SMTP_PASSWORD")?.trim();
   const from = (
     readEnv("MAIL_FROM") ?? readEnv("MAIL_FROM\r\n\r\n")
   )?.trim();
   const supportEmail = readEnv("SUPPORT_EMAIL")?.trim() ||
     "foodloops.team@gmail.com";
+  const secureSetting = readEnv("SMTP_SECURE")?.trim().toLowerCase();
+  const secure = secureSetting ? secureSetting === "true" : port === 465;
 
-  if (!apiKey || !from) return null;
-  return { apiKey, from, supportEmail };
+  if (
+    !host || !Number.isInteger(port) || port < 1 || port > 65535 ||
+    !username || !password || !from
+  ) return null;
+
+  return {
+    host,
+    port,
+    secure,
+    username,
+    password,
+    from,
+    supportEmail,
+  };
 }
 
 export function buildDeactivationEmail(
@@ -137,8 +164,8 @@ El equipo de FoodLoops`;
 
   return {
     from: config.from,
-    to: [user.email],
-    reply_to: config.supportEmail,
+    to: user.email,
+    replyTo: config.supportEmail,
     subject,
     text,
     html,
@@ -148,37 +175,53 @@ El equipo de FoodLoops`;
 export function sendDeactivationEmail(
   user: DeactivationEmailUser,
   config: EmailConfig,
-  fetcher: Fetcher = fetch,
+  createTransport: TransportFactory = createSmtpTransport,
 ) {
-  return sendEmail(buildDeactivationEmail(user, config), config, fetcher);
+  return sendEmail(
+    buildDeactivationEmail(user, config),
+    config,
+    createTransport,
+  );
 }
 
 export function sendReactivationEmail(
   user: DeactivationEmailUser,
   config: EmailConfig,
-  fetcher: Fetcher = fetch,
+  createTransport: TransportFactory = createSmtpTransport,
 ) {
-  return sendEmail(buildReactivationEmail(user, config), config, fetcher);
+  return sendEmail(
+    buildReactivationEmail(user, config),
+    config,
+    createTransport,
+  );
 }
 
 async function sendEmail(
-  email: ReturnType<typeof buildDeactivationEmail>,
+  email: MailMessage,
   config: EmailConfig,
-  fetcher: Fetcher,
+  createTransport: TransportFactory,
 ) {
-  const response = await fetcher("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(email),
-  });
-
-  if (!response.ok) {
-    const details = (await response.text().catch(() => "")).slice(0, 500);
-    throw new Error(`Resend returned ${response.status}: ${details}`);
+  const transport = createTransport(config);
+  try {
+    await transport.sendMail(email);
+  } finally {
+    transport.close?.();
   }
+}
+
+function createSmtpTransport(config: EmailConfig): MailTransport {
+  return nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: {
+      user: config.username,
+      pass: config.password,
+    },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 15_000,
+  });
 }
 
 function escapeHtml(value: string) {
