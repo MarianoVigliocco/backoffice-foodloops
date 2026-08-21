@@ -1,6 +1,46 @@
 // src/lib/api.ts
 import { EDGE_BASE, supabase } from './supabaseClient';
 
+export type MetricPoint = {
+    value: number | null;
+    previous: number | null;
+    change_percent: number | null;
+};
+
+export type CohortMetricPoint = MetricPoint & {
+    numerator: number;
+    denominator: number;
+    previous_numerator: number;
+    previous_denominator: number;
+};
+
+export type SegmentMetric = {
+    name: string;
+    users: number;
+    previous_users: number;
+    activation: CohortMetricPoint;
+    retention_d7: CohortMetricPoint;
+    retention_d30: CohortMetricPoint;
+};
+
+export type ImportPlatformMetric = {
+    platform: 'Instagram' | 'TikTok';
+    attempts: number;
+    successes: number;
+    failures: number;
+    pending: number;
+    success_rate: number | null;
+    average_duration_seconds: number | null;
+    median_duration_seconds: number | null;
+    imported_recipes: number;
+    attempts_comparison: MetricPoint;
+    successes_comparison: MetricPoint;
+    failures_comparison: MetricPoint;
+    success_rate_comparison: MetricPoint;
+    duration_comparison: MetricPoint;
+    imported_recipes_comparison: MetricPoint;
+};
+
 export type MetricResponse = {
     now: string;
     range: {
@@ -8,6 +48,8 @@ export type MetricResponse = {
         to_exclusive: string;
         timezone: string;
         days: number;
+        previous_from: string;
+        previous_to_exclusive: string;
     };
     active_users: number;
     new_users: number;
@@ -29,6 +71,52 @@ export type MetricResponse = {
     recipes_per_day_14: { day: string; count: number }[];
     diets_distribution: { name: string; users: number }[];
     allergies_distribution: { name: string; users: number }[];
+    comparisons: {
+        active_users: MetricPoint;
+        new_users: MetricPoint;
+        recipes_created: MetricPoint;
+        recipes_saved: MetricPoint;
+    };
+    product_metrics: {
+        weekly_value_users: MetricPoint;
+        activation: CohortMetricPoint;
+        retention: {
+            d1: CohortMetricPoint;
+            d7: CohortMetricPoint;
+            d30: CohortMetricPoint;
+        };
+        engagement: {
+            dau: MetricPoint;
+            wau: MetricPoint;
+            mau: MetricPoint;
+            dau_mau_stickiness: MetricPoint;
+            wau_mau_stickiness: MetricPoint;
+        };
+        user_mix: {
+            new_users: MetricPoint;
+            returning_users: MetricPoint;
+        };
+        time_to_first_value: {
+            average_days: MetricPoint;
+            median_days: MetricPoint;
+            sample_size: number;
+            eligible_users: number;
+        };
+        per_active_user: {
+            recipes: MetricPoint;
+            saves: MetricPoint;
+        };
+        import_performance: {
+            tracking_since: string | null;
+            platforms: ImportPlatformMetric[];
+        };
+    };
+    segments: {
+        countries: SegmentMetric[];
+        diets: SegmentMetric[];
+        allergies: SegmentMetric[];
+        source_platforms: SegmentMetric[];
+    };
 };
 
 // helper para armar headers con el JWT actual

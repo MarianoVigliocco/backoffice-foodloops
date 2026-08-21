@@ -1,7 +1,12 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import Card from '../components/Card';
-import { apiMetrics, type MetricResponse } from '../lib/api';
+import {
+  apiMetrics,
+  type MetricPoint,
+  type MetricResponse,
+  type SegmentMetric,
+} from '../lib/api';
 import {
   LineChart,
   Line,
@@ -22,6 +27,85 @@ const rangeForDays = (days: number): DateSelection => ({
   from: dayjs().subtract(days - 1, 'day').format('YYYY-MM-DD'),
   to: today(),
 });
+
+const numberFormatter = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
+
+const formatValue = (value: number | null, suffix = '') =>
+  value == null ? '—' : `${numberFormatter.format(value)}${suffix}`;
+
+const DeltaBadge: React.FC<{
+  metric: MetricPoint;
+  invert?: boolean;
+  compact?: boolean;
+}> = ({ metric, invert = false, compact = false }) => {
+  const change = metric.change_percent;
+  if (change == null) {
+    return (
+      <span className={`fl-delta fl-delta-neutral ${compact ? 'fl-delta-compact' : ''}`}>
+        Sin base comparable
+      </span>
+    );
+  }
+
+  const positive = invert ? change < 0 : change > 0;
+  const negative = invert ? change > 0 : change < 0;
+  const sign = change > 0 ? '+' : '';
+  return (
+    <span
+      className={`fl-delta ${positive ? 'fl-delta-positive' : negative ? 'fl-delta-negative' : 'fl-delta-neutral'} ${compact ? 'fl-delta-compact' : ''}`}
+      title={`Período anterior: ${formatValue(metric.previous)}`}
+    >
+      {sign}{numberFormatter.format(change)}%
+    </span>
+  );
+};
+
+const MetricCell: React.FC<{
+  metric: MetricPoint;
+  suffix?: string;
+  invert?: boolean;
+}> = ({ metric, suffix = '', invert = false }) => (
+  <div className="fl-metric-cell">
+    <strong>{formatValue(metric.value, suffix)}</strong>
+    <DeltaBadge metric={metric} invert={invert} compact />
+  </div>
+);
+
+const SegmentTable: React.FC<{
+  rows: SegmentMetric[];
+  label: string;
+}> = ({ rows, label }) => {
+  if (!rows.length) {
+    return <div className="fl-empty fl-empty-compact">Sin cohortes suficientes para este segmento.</div>;
+  }
+
+  return (
+    <div className="fl-dashboard-table-scroll" role="region" aria-label={label} tabIndex={0}>
+      <table className="fl-table fl-table-compact fl-segment-table">
+        <thead>
+          <tr>
+            <th>Segmento</th>
+            <th className="fl-table-cell-right">Cohorte</th>
+            <th className="fl-table-cell-right">Activación</th>
+            <th className="fl-table-cell-right">Ret. D7</th>
+            <th className="fl-table-cell-right">Ret. D30</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.name}>
+              <td className="fl-table-title-cell">{row.name}</td>
+              <td className="fl-table-cell-right">{row.users}</td>
+              <td><MetricCell metric={row.activation} suffix="%" /></td>
+              <td><MetricCell metric={row.retention_d7} suffix="%" /></td>
+              <td><MetricCell metric={row.retention_d30} suffix="%" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 const Dashboard: React.FC = () => {
   const [data, setData] = React.useState<MetricResponse | null>(null);
@@ -221,10 +305,184 @@ const Dashboard: React.FC = () => {
 
       {err && <div className="fl-error-badge fl-dashboard-inline-error">{err}</div>}
 
+      <section className="fl-analytics-section" aria-labelledby="product-health-title">
+        <div className="fl-section-heading">
+          <div>
+            <span className="fl-section-kicker">Salud del producto</span>
+            <h2 id="product-health-title">Uso, activación y retención</h2>
+          </div>
+          <p>Las variaciones comparan contra el período inmediatamente anterior de igual duración.</p>
+        </div>
+
+        <div className="fl-product-grid">
+          <Card className="fl-card fl-north-star span-12" title="Usuarios con valor semanal">
+            <div className="fl-north-star-content">
+              <div>
+                <div className="fl-north-star-value">
+                  {formatValue(data.product_metrics.weekly_value_users.value)}
+                </div>
+                <div className="fl-north-star-label">
+                  Usuarios únicos que crearon, importaron o guardaron una receta en los últimos 7 días.
+                </div>
+              </div>
+              <div className="fl-north-star-comparison">
+                <DeltaBadge metric={data.product_metrics.weekly_value_users} />
+                <span>vs. los 7 días anteriores</span>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-insight-card span-3" title="Activación en 7 días">
+            <div className="fl-insight-value">
+              {formatValue(data.product_metrics.activation.value, '%')}
+            </div>
+            <DeltaBadge metric={data.product_metrics.activation} />
+            <p>
+              {data.product_metrics.activation.numerator} de {data.product_metrics.activation.denominator} usuarios de cohortes maduras alcanzaron su primer valor.
+            </p>
+          </Card>
+
+          <Card className="fl-card fl-insight-card span-3" title="Stickiness DAU / MAU">
+            <div className="fl-insight-value">
+              {formatValue(data.product_metrics.engagement.dau_mau_stickiness.value, '%')}
+            </div>
+            <DeltaBadge metric={data.product_metrics.engagement.dau_mau_stickiness} />
+            <p>Proporción de usuarios mensuales que también estuvieron activos en las últimas 24 horas.</p>
+          </Card>
+
+          <Card className="fl-card fl-insight-card span-3" title="Tiempo al primer valor">
+            <div className="fl-insight-value">
+              {formatValue(data.product_metrics.time_to_first_value.median_days.value, ' días')}
+            </div>
+            <DeltaBadge metric={data.product_metrics.time_to_first_value.median_days} invert />
+            <p>
+              Mediana · promedio {formatValue(data.product_metrics.time_to_first_value.average_days.value, ' días')} · muestra {data.product_metrics.time_to_first_value.sample_size}.
+            </p>
+          </Card>
+
+          <Card className="fl-card fl-insight-card span-3" title="Intensidad de uso">
+            <div className="fl-dual-metric">
+              <div>
+                <strong>{formatValue(data.product_metrics.per_active_user.recipes.value)}</strong>
+                <span>recetas / activo</span>
+                <DeltaBadge metric={data.product_metrics.per_active_user.recipes} compact />
+              </div>
+              <div>
+                <strong>{formatValue(data.product_metrics.per_active_user.saves.value)}</strong>
+                <span>guardados / activo</span>
+                <DeltaBadge metric={data.product_metrics.per_active_user.saves} compact />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-metric-panel span-6" title="Retención por cohorte">
+            <div className="fl-metric-strip">
+              {([
+                ['D1', data.product_metrics.retention.d1],
+                ['D7', data.product_metrics.retention.d7],
+                ['D30', data.product_metrics.retention.d30],
+              ] as const).map(([label, metric]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong>{formatValue(metric.value, '%')}</strong>
+                  <DeltaBadge metric={metric} compact />
+                  <small>{metric.numerator}/{metric.denominator} elegibles</small>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-metric-panel span-6" title="Frecuencia de actividad">
+            <div className="fl-metric-strip">
+              {([
+                ['DAU', data.product_metrics.engagement.dau],
+                ['WAU', data.product_metrics.engagement.wau],
+                ['MAU', data.product_metrics.engagement.mau],
+              ] as const).map(([label, metric]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong>{formatValue(metric.value)}</strong>
+                  <DeltaBadge metric={metric} compact />
+                </div>
+              ))}
+            </div>
+            <div className="fl-panel-footnote">
+              WAU / MAU: {formatValue(data.product_metrics.engagement.wau_mau_stickiness.value, '%')}
+              <DeltaBadge metric={data.product_metrics.engagement.wau_mau_stickiness} compact />
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-metric-panel span-6" title="Usuarios nuevos vs. recurrentes con actividad">
+            <div className="fl-metric-strip fl-metric-strip-two">
+              <div>
+                <span>Nuevos activos</span>
+                <strong>{formatValue(data.product_metrics.user_mix.new_users.value)}</strong>
+                <DeltaBadge metric={data.product_metrics.user_mix.new_users} compact />
+              </div>
+              <div>
+                <span>Recurrentes</span>
+                <strong>{formatValue(data.product_metrics.user_mix.returning_users.value)}</strong>
+                <DeltaBadge metric={data.product_metrics.user_mix.returning_users} compact />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma">
+            <div className="fl-import-note">
+              {data.product_metrics.import_performance.tracking_since
+                ? `Seguimiento de intentos activo desde ${dayjs(data.product_metrics.import_performance.tracking_since).format('DD/MM/YYYY HH:mm')}.`
+                : 'Los éxitos históricos se estiman por recetas guardadas. Intentos, fallos y tiempos comenzarán a registrarse con esta versión.'}
+            </div>
+            <div className="fl-dashboard-table-scroll" role="region" aria-label="Éxito de importación por plataforma" tabIndex={0}>
+              <table className="fl-table fl-table-compact fl-import-table">
+                <thead>
+                  <tr>
+                    <th>Plataforma</th>
+                    <th>Intentos</th>
+                    <th>Éxitos</th>
+                    <th>Fallos</th>
+                    <th>Tasa</th>
+                    <th>Tiempo prom.</th>
+                    <th>Recetas importadas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.product_metrics.import_performance.platforms.map((row) => (
+                    <tr key={row.platform}>
+                      <td><span className={`fl-platform-badge fl-platform-${row.platform.toLowerCase()}`}>{row.platform}</span></td>
+                      <td><MetricCell metric={row.attempts_comparison} /></td>
+                      <td><MetricCell metric={row.successes_comparison} /></td>
+                      <td><MetricCell metric={row.failures_comparison} invert /></td>
+                      <td><MetricCell metric={row.success_rate_comparison} suffix="%" /></td>
+                      <td><MetricCell metric={row.duration_comparison} suffix=" s" invert /></td>
+                      <td><MetricCell metric={row.imported_recipes_comparison} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por país">
+            <SegmentTable rows={data.segments.countries} label="Activación y retención por país" />
+          </Card>
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por dieta">
+            <SegmentTable rows={data.segments.diets} label="Activación y retención por dieta" />
+          </Card>
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por alergia">
+            <SegmentTable rows={data.segments.allergies} label="Activación y retención por alergia" />
+          </Card>
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por plataforma de origen">
+            <SegmentTable rows={data.segments.source_platforms} label="Activación y retención por plataforma de origen" />
+          </Card>
+        </div>
+      </section>
+
       <div className="fl-dashboard-grid">
         {/* KPIs */}
         <Card className="fl-card fl-kpi span-3" title="Usuarios activos">
           <div className="fl-kpi-value">{data.active_users}</div>
+          <DeltaBadge metric={data.comparisons.active_users} />
           <div className="fl-kpi-label">
             Usuarios únicos con actividad en los {periodDays} días seleccionados
           </div>
@@ -232,6 +490,7 @@ const Dashboard: React.FC = () => {
 
         <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos">
           <div className="fl-kpi-value">{data.new_users}</div>
+          <DeltaBadge metric={data.comparisons.new_users} />
           <div className="fl-kpi-label">
             Registros creados durante el período seleccionado
           </div>
@@ -239,11 +498,13 @@ const Dashboard: React.FC = () => {
 
         <Card className="fl-card fl-kpi span-3" title="Recetas creadas">
           <div className="fl-kpi-value">{data.recipes_created}</div>
+          <DeltaBadge metric={data.comparisons.recipes_created} />
           <div className="fl-kpi-label">Recetas incorporadas durante el período seleccionado</div>
         </Card>
 
         <Card className="fl-card fl-kpi span-3" title="Recetas guardadas">
           <div className="fl-kpi-value">{data.recipes_saved}</div>
+          <DeltaBadge metric={data.comparisons.recipes_saved} />
           <div className="fl-kpi-label">
             Guardados realizados durante el período seleccionado
           </div>
