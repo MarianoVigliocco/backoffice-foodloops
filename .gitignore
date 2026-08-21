@@ -18,6 +18,7 @@ dist-ssr
 .dev.vars*
 outputs
 work
+supabase/.temp/
 
 # Editor directories and files
 .vscode/*

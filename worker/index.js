@@ -1,5 +1,5 @@
 export default {
-  async fetch() {
-    return new Response('Not found', { status: 404 })
+  async fetch(request, env) {
+    return env.ASSETS.fetch(request)
   },
 }

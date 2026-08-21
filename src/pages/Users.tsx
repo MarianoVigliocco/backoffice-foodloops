@@ -270,8 +270,8 @@ const Users: React.FC = () => {
             </h2>
             <p id="fl-users-confirm-description">
               {pendingToggle.nextEnabled
-                ? `${pendingName} podrá volver a iniciar sesión en FoodLoops.`
-                : `${pendingName} no podrá volver a iniciar sesión hasta que lo reactives.`}
+                ? `${pendingName} podrá volver a iniciar sesión en FoodLoops y recibirá un email informándole la reactivación.`
+                : `${pendingName} no podrá volver a iniciar sesión hasta que lo reactives y recibirá un email informándole la desactivación.`}
             </p>
             {toggleError && <div className="fl-users-modal-error" role="alert">{toggleError}</div>}
             <div className="fl-users-modal-actions">
@@ -289,7 +289,7 @@ const Users: React.FC = () => {
                 autoFocus
               >
                 {updating
-                  ? 'Actualizando...'
+                  ? pendingToggle.nextEnabled ? 'Reactivando y notificando...' : 'Desactivando y notificando...'
                   : pendingToggle.nextEnabled ? 'Sí, reactivar' : 'Sí, desactivar'}
               </button>
             </div>
