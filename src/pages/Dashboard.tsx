@@ -30,6 +30,32 @@ const rangeForDays = (days: number): DateSelection => ({
 
 const numberFormatter = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
 
+const METRIC_HELP = {
+  weeklyValue: 'Cuenta usuarios únicos que, en los últimos 7 días, crearon, importaron o guardaron al menos una receta. La variación compara con los 7 días anteriores.',
+  activation: 'De los usuarios registrados en el período que ya tuvieron 7 días completos para usar la app, indica qué porcentaje creó, importó o guardó su primera receta durante esa primera semana.',
+  dailyStickiness: 'Muestra qué porcentaje de los usuarios activos de los últimos 30 días también estuvo activo en las últimas 24 horas. Cuanto mayor sea, más frecuente es el hábito diario.',
+  firstValue: 'Mide los días entre el registro y la primera receta creada, importada o guardada. La tarjeta destaca la mediana y también muestra el promedio. Un valor menor es mejor.',
+  intensity: 'Divide las recetas creadas y los guardados del período por la cantidad de usuarios activos del mismo período.',
+  retention: 'Muestra qué porcentaje de usuarios nuevos volvió a tener actividad durante el día 1, 7 o 30 después de registrarse. Solo incluye a quienes ya tuvieron tiempo de llegar a cada día.',
+  frequency: 'DAU, WAU y MAU son usuarios únicos activos en las últimas 24 horas, 7 días y 30 días. WAU/MAU indica qué parte de los usuarios mensuales también estuvo activa esta semana.',
+  userMix: 'Separa a los usuarios activos del período entre quienes se registraron dentro de esas fechas y quienes ya existían y regresaron.',
+  imports: 'Compara intentos, éxitos, fallos, tasa de éxito, duración promedio y recetas importadas desde Instagram y TikTok durante el período seleccionado.',
+  countrySegments: 'Para cada país, muestra cuántos usuarios nuevos se analizan y qué porcentaje se activó o regresó en los días 7 y 30.',
+  dietSegments: 'Compara activación y retención de los usuarios nuevos según los estilos de alimentación que tienen declarados actualmente.',
+  allergySegments: 'Compara activación y retención de los usuarios nuevos según las alergias que tienen declaradas actualmente.',
+  sourceSegments: 'Compara usuarios nuevos que importaron contenido desde Instagram o TikTok. La plataforma representa el origen de la receta, no el canal por el que conocieron FoodLoops.',
+  activeUsers: 'Usuarios únicos que, durante el período, crearon, importaron o guardaron recetas, conversaron con Palty o crearon un plan de comidas.',
+  newUsers: 'Cantidad de cuentas registradas dentro del período seleccionado, hayan tenido actividad o no.',
+  recipesCreated: 'Cantidad total de recetas incorporadas durante el período, tanto creadas manualmente como importadas.',
+  recipesSaved: 'Cantidad total de acciones de guardado realizadas por los usuarios durante el período.',
+  recipesByDay: 'Distribuye por día todas las recetas incorporadas dentro del período seleccionado para mostrar su evolución.',
+  tags: 'Ordena las etiquetas según cuántas veces aparecen en las recetas del período seleccionado.',
+  sourceAuthors: 'Ranking de autores originales de Instagram y TikTok según las recetas incorporadas en el período. Guardados cuenta los guardados recibidos por esas recetas durante las mismas fechas.',
+  diets: 'Estado actual de los estilos de alimentación declarados. Un usuario puede elegir más de uno, por lo que el porcentaje representa la participación entre todas las declaraciones.',
+  allergies: 'Estado actual de las alergias declaradas. Un usuario puede aparecer en más de una categoría y el porcentaje se calcula sobre todas las declaraciones.',
+  topSaved: 'Ordena las recetas por la cantidad de veces que fueron guardadas dentro del período seleccionado.',
+} as const;
+
 const formatValue = (value: number | null, suffix = '') =>
   value == null ? '—' : `${numberFormatter.format(value)}${suffix}`;
 
@@ -76,7 +102,7 @@ const SegmentTable: React.FC<{
   label: string;
 }> = ({ rows, label }) => {
   if (!rows.length) {
-    return <div className="fl-empty fl-empty-compact">Sin cohortes suficientes para este segmento.</div>;
+    return <div className="fl-empty fl-empty-compact">Todavía no hay suficientes usuarios para calcular esta métrica.</div>;
   }
 
   return (
@@ -85,7 +111,7 @@ const SegmentTable: React.FC<{
         <thead>
           <tr>
             <th>Segmento</th>
-            <th className="fl-table-cell-right">Cohorte</th>
+            <th className="fl-table-cell-right">Usuarios analizados</th>
             <th className="fl-table-cell-right">Activación</th>
             <th className="fl-table-cell-right">Ret. D7</th>
             <th className="fl-table-cell-right">Ret. D30</th>
@@ -315,7 +341,7 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="fl-product-grid">
-          <Card className="fl-card fl-north-star span-12" title="Usuarios con valor semanal">
+          <Card className="fl-card fl-north-star span-12" title="Usuarios con valor semanal" tooltip={METRIC_HELP.weeklyValue}>
             <div className="fl-north-star-content">
               <div>
                 <div className="fl-north-star-value">
@@ -332,17 +358,17 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Activación en 7 días">
+          <Card className="fl-card fl-insight-card span-3" title="Activación en 7 días" tooltip={METRIC_HELP.activation}>
             <div className="fl-insight-value">
               {formatValue(data.product_metrics.activation.value, '%')}
             </div>
             <DeltaBadge metric={data.product_metrics.activation} />
             <p>
-              {data.product_metrics.activation.numerator} de {data.product_metrics.activation.denominator} usuarios de cohortes maduras alcanzaron su primer valor.
+              {data.product_metrics.activation.numerator} de {data.product_metrics.activation.denominator} usuarios que ya tuvieron 7 días para usar la app alcanzaron su primer valor.
             </p>
           </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Stickiness DAU / MAU">
+          <Card className="fl-card fl-insight-card span-3" title="Stickiness DAU / MAU" tooltip={METRIC_HELP.dailyStickiness}>
             <div className="fl-insight-value">
               {formatValue(data.product_metrics.engagement.dau_mau_stickiness.value, '%')}
             </div>
@@ -350,7 +376,7 @@ const Dashboard: React.FC = () => {
             <p>Proporción de usuarios mensuales que también estuvieron activos en las últimas 24 horas.</p>
           </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Tiempo al primer valor">
+          <Card className="fl-card fl-insight-card span-3" title="Tiempo al primer valor" tooltip={METRIC_HELP.firstValue}>
             <div className="fl-insight-value">
               {formatValue(data.product_metrics.time_to_first_value.median_days.value, ' días')}
             </div>
@@ -360,7 +386,7 @@ const Dashboard: React.FC = () => {
             </p>
           </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Intensidad de uso">
+          <Card className="fl-card fl-insight-card span-3" title="Intensidad de uso" tooltip={METRIC_HELP.intensity}>
             <div className="fl-dual-metric">
               <div>
                 <strong>{formatValue(data.product_metrics.per_active_user.recipes.value)}</strong>
@@ -375,7 +401,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Retención por cohorte">
+          <Card className="fl-card fl-metric-panel span-6" title="Retención de usuarios nuevos" tooltip={METRIC_HELP.retention}>
             <div className="fl-metric-strip">
               {([
                 ['D1', data.product_metrics.retention.d1],
@@ -392,7 +418,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Frecuencia de actividad">
+          <Card className="fl-card fl-metric-panel span-6" title="Frecuencia de actividad" tooltip={METRIC_HELP.frequency}>
             <div className="fl-metric-strip">
               {([
                 ['DAU', data.product_metrics.engagement.dau],
@@ -412,7 +438,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Usuarios nuevos vs. recurrentes con actividad">
+          <Card className="fl-card fl-metric-panel span-6" title="Usuarios nuevos vs. recurrentes con actividad" tooltip={METRIC_HELP.userMix}>
             <div className="fl-metric-strip fl-metric-strip-two">
               <div>
                 <span>Nuevos activos</span>
@@ -427,7 +453,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma">
+          <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma" tooltip={METRIC_HELP.imports}>
             <div className="fl-import-note">
               {data.product_metrics.import_performance.tracking_since
                 ? `Seguimiento de intentos activo desde ${dayjs(data.product_metrics.import_performance.tracking_since).format('DD/MM/YYYY HH:mm')}.`
@@ -463,16 +489,16 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por país">
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por país" tooltip={METRIC_HELP.countrySegments}>
             <SegmentTable rows={data.segments.countries} label="Activación y retención por país" />
           </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por dieta">
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por dieta" tooltip={METRIC_HELP.dietSegments}>
             <SegmentTable rows={data.segments.diets} label="Activación y retención por dieta" />
           </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por alergia">
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por alergia" tooltip={METRIC_HELP.allergySegments}>
             <SegmentTable rows={data.segments.allergies} label="Activación y retención por alergia" />
           </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por plataforma de origen">
+          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por plataforma de origen" tooltip={METRIC_HELP.sourceSegments}>
             <SegmentTable rows={data.segments.source_platforms} label="Activación y retención por plataforma de origen" />
           </Card>
         </div>
@@ -480,7 +506,7 @@ const Dashboard: React.FC = () => {
 
       <div className="fl-dashboard-grid">
         {/* KPIs */}
-        <Card className="fl-card fl-kpi span-3" title="Usuarios activos">
+        <Card className="fl-card fl-kpi span-3" title="Usuarios activos" tooltip={METRIC_HELP.activeUsers}>
           <div className="fl-kpi-value">{data.active_users}</div>
           <DeltaBadge metric={data.comparisons.active_users} />
           <div className="fl-kpi-label">
@@ -488,7 +514,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos">
+        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos" tooltip={METRIC_HELP.newUsers}>
           <div className="fl-kpi-value">{data.new_users}</div>
           <DeltaBadge metric={data.comparisons.new_users} />
           <div className="fl-kpi-label">
@@ -496,13 +522,13 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas creadas">
+        <Card className="fl-card fl-kpi span-3" title="Recetas creadas" tooltip={METRIC_HELP.recipesCreated}>
           <div className="fl-kpi-value">{data.recipes_created}</div>
           <DeltaBadge metric={data.comparisons.recipes_created} />
           <div className="fl-kpi-label">Recetas incorporadas durante el período seleccionado</div>
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas">
+        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas" tooltip={METRIC_HELP.recipesSaved}>
           <div className="fl-kpi-value">{data.recipes_saved}</div>
           <DeltaBadge metric={data.comparisons.recipes_saved} />
           <div className="fl-kpi-label">
@@ -514,6 +540,7 @@ const Dashboard: React.FC = () => {
         <Card
           className="fl-card span-8"
           title="Recetas creadas por día"
+          tooltip={METRIC_HELP.recipesByDay}
         >
           <div className="fl-chart-wrapper">
             {hasRecipesPerDay ? (
@@ -550,7 +577,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Top tags */}
-        <Card className="fl-card span-4" title="Top tags por uso">
+        <Card className="fl-card span-4" title="Top tags por uso" tooltip={METRIC_HELP.tags}>
           <div className="fl-chart-wrapper">
             {hasTopTags ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -591,7 +618,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram">
+        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram" tooltip={METRIC_HELP.sourceAuthors}>
           {hasTopAuthors ? (
             <table className="fl-table fl-authors-table">
               <thead>
@@ -626,6 +653,7 @@ const Dashboard: React.FC = () => {
         <Card
           className="fl-card fl-table-card fl-scroll-table-card span-4"
           title="Estilos de alimentación declarados · Estado actual"
+          tooltip={METRIC_HELP.diets}
         >
           {hasDiets ? (
             <div
@@ -666,6 +694,7 @@ const Dashboard: React.FC = () => {
         <Card
           className="fl-card fl-table-card fl-scroll-table-card span-4"
           title="Alergias reportadas por usuarios · Estado actual"
+          tooltip={METRIC_HELP.allergies}
         >
           {hasAllergies ? (
             <div
@@ -703,7 +732,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Recetas más guardadas */}
-        <Card className="fl-card fl-table-card fl-scroll-table-card span-4" title="Recetas más guardadas">
+        <Card className="fl-card fl-table-card fl-scroll-table-card span-4" title="Recetas más guardadas" tooltip={METRIC_HELP.topSaved}>
           {hasTopSaved ? (
             <div
               className="fl-dashboard-table-scroll"
