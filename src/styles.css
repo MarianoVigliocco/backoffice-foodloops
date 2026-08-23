@@ -35,6 +35,10 @@
   --shadow-md: 0 12px 32px rgba(16, 24, 40, 0.09);
   --topbar-bg: rgba(255, 255, 255, 0.88);
   --brand-logo-bg: transparent;
+  --north-star-bg-start: #17452b;
+  --north-star-bg-end: #2e704b;
+  --north-star-text: #ffffff;
+  --north-star-text-muted: rgba(255, 255, 255, 0.9);
 }
 
 :root[data-theme='dark'] {
@@ -71,6 +75,10 @@
   --shadow-md: 0 18px 44px rgba(0, 0, 0, 0.30);
   --topbar-bg: rgba(13, 18, 24, 0.86);
   --brand-logo-bg: rgba(255, 255, 255, 0.94);
+  --north-star-bg-start: #1f5034;
+  --north-star-bg-end: #327956;
+  --north-star-text: #f7fff9;
+  --north-star-text-muted: rgba(247, 255, 249, 0.9);
 }
 
 * { box-sizing: border-box; }
@@ -160,8 +168,8 @@ a { color: inherit; text-decoration: none; }
 .card-tooltip-trigger:hover, .card-tooltip-trigger:focus-visible { color: var(--accent); background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
 .card-tooltip { position: absolute; top: 25px; right: 0; z-index: 30; width: max-content; max-width: min(290px, calc(100vw - 56px)); padding: 10px 11px; color: #fff; background: #243142; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px; box-shadow: var(--shadow-md); font-size: 9px; font-weight: 500; line-height: 1.55; letter-spacing: 0; text-align: left; text-transform: none; opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-3px); transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease; }
 .card-tooltip-container:hover .card-tooltip, .card-tooltip-container:focus-within .card-tooltip, .card-tooltip-container.is-open .card-tooltip { opacity: 1; visibility: visible; transform: translateY(0); }
-.fl-north-star .card-title-row h3 { color: rgba(255, 255, 255, 0.75); }
-.fl-north-star .card-tooltip-trigger { color: rgba(255, 255, 255, 0.9); background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.28); }
+.fl-north-star .card-title-row h3 { color: var(--north-star-text-muted); }
+.fl-north-star .card-tooltip-trigger { color: var(--north-star-text); background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.45); }
 .fl-north-star .card-tooltip-trigger:hover, .fl-north-star .card-tooltip-trigger:focus-visible { color: #15492c; background: #fff; border-color: #fff; }
 .fl-card { padding: 17px 18px 15px; display: flex; flex-direction: column; justify-content: space-between; }
 
