@@ -3,24 +3,27 @@ import dayjs from 'dayjs';
 import Card from '../components/Card';
 import {
   apiMetrics,
+  type CohortMetric,
   type MetricPoint,
   type MetricResponse,
-  type SegmentMetric,
 } from '../lib/api';
 import {
-  LineChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
 } from 'recharts';
 import '../styles/dashboard.css';
 
 type DateSelection = { from: string; to: string };
 type RangePreset = 7 | 30 | 90 | 'custom';
+type TrendGranularity = 'weekly' | 'monthly';
 
 const today = () => dayjs().format('YYYY-MM-DD');
 const rangeForDays = (days: number): DateSelection => ({
@@ -28,110 +31,60 @@ const rangeForDays = (days: number): DateSelection => ({
   to: today(),
 });
 
-const numberFormatter = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 });
-
-const METRIC_HELP = {
-  weeklyValue: 'Cuenta usuarios únicos que, en los últimos 7 días, crearon, importaron o guardaron al menos una receta. La variación compara con los 7 días anteriores.',
-  activation: 'De los usuarios registrados en el período que ya tuvieron 7 días completos para usar la app, indica qué porcentaje creó, importó o guardó su primera receta durante esa primera semana.',
-  dailyStickiness: 'Muestra qué porcentaje de los usuarios activos de los últimos 30 días también estuvo activo en las últimas 24 horas. Cuanto mayor sea, más frecuente es el hábito diario.',
-  firstValue: 'Mide los días entre el registro y la primera receta creada, importada o guardada. La tarjeta destaca la mediana y también muestra el promedio. Un valor menor es mejor.',
-  intensity: 'Divide las recetas creadas y los guardados del período por la cantidad de usuarios activos del mismo período.',
-  retention: 'Muestra qué porcentaje de usuarios nuevos volvió a tener actividad durante el día 1, 7 o 30 después de registrarse. Solo incluye a quienes ya tuvieron tiempo de llegar a cada día.',
-  frequency: 'DAU, WAU y MAU son usuarios únicos activos en las últimas 24 horas, 7 días y 30 días. WAU/MAU indica qué parte de los usuarios mensuales también estuvo activa esta semana.',
-  userMix: 'Separa a los usuarios activos del período entre quienes se registraron dentro de esas fechas y quienes ya existían y regresaron.',
-  imports: 'Compara intentos, éxitos, fallos, tasa de éxito, duración promedio y recetas importadas desde Instagram y TikTok durante el período seleccionado.',
-  countrySegments: 'Para cada país, muestra cuántos usuarios nuevos se analizan y qué porcentaje se activó o regresó en los días 7 y 30.',
-  dietSegments: 'Compara activación y retención de los usuarios nuevos según los estilos de alimentación que tienen declarados actualmente.',
-  allergySegments: 'Compara activación y retención de los usuarios nuevos según las alergias que tienen declaradas actualmente.',
-  sourceSegments: 'Compara usuarios nuevos que importaron contenido desde Instagram o TikTok. La plataforma representa el origen de la receta, no el canal por el que conocieron FoodLoops.',
-  activeUsers: 'Usuarios únicos que, durante el período, crearon, importaron o guardaron recetas, conversaron con Palty o crearon un plan de comidas.',
-  newUsers: 'Cantidad de cuentas registradas dentro del período seleccionado, hayan tenido actividad o no.',
-  recipesCreated: 'Cantidad total de recetas incorporadas durante el período, tanto creadas manualmente como importadas.',
-  recipesSaved: 'Cantidad total de acciones de guardado realizadas por los usuarios durante el período.',
-  recipesByDay: 'Distribuye por día todas las recetas incorporadas dentro del período seleccionado para mostrar su evolución.',
-  tags: 'Ordena las etiquetas según cuántas veces aparecen en las recetas del período seleccionado.',
-  sourceAuthors: 'Ranking de autores originales de Instagram y TikTok según las recetas incorporadas en el período. Guardados cuenta los guardados recibidos por esas recetas durante las mismas fechas.',
-  diets: 'Estado actual de los estilos de alimentación declarados. Un usuario puede elegir más de uno, por lo que el porcentaje representa la participación entre todas las declaraciones.',
-  allergies: 'Estado actual de las alergias declaradas. Un usuario puede aparecer en más de una categoría y el porcentaje se calcula sobre todas las declaraciones.',
-  topSaved: 'Ordena las recetas por la cantidad de veces que fueron guardadas dentro del período seleccionado.',
-} as const;
+const numberFormatter = new Intl.NumberFormat('es-AR');
 
 const formatValue = (value: number | null, suffix = '') =>
   value == null ? '—' : `${numberFormatter.format(value)}${suffix}`;
 
+const formatPercent = (value: number | null) =>
+  value == null ? '—' : `${numberFormatter.format(value)}%`;
+
+const formatTrendPeriod = (value: string) =>
+  value.length === 7
+    ? dayjs(`${value}-01`).format('MMM YY')
+    : dayjs(value).format('DD/MM');
+
 const DeltaBadge: React.FC<{
-  metric: MetricPoint;
-  invert?: boolean;
+  point: MetricPoint;
+  label: string;
+  inverse?: boolean;
   compact?: boolean;
-}> = ({ metric, invert = false, compact = false }) => {
-  const change = metric.change_percent;
-  if (change == null) {
-    return (
-      <span className={`fl-delta fl-delta-neutral ${compact ? 'fl-delta-compact' : ''}`}>
-        Sin base comparable
-      </span>
-    );
+}> = ({ point, label, inverse = false, compact = false }) => {
+  if (!point.comparison_available || point.change_percent == null) {
+    return <span className="fl-delta fl-delta-muted">{compact ? 'Sin base' : 'Sin base comparable'}</span>;
   }
 
-  const positive = invert ? change < 0 : change > 0;
-  const negative = invert ? change > 0 : change < 0;
-  const sign = change > 0 ? '+' : '';
+  const isPositive = point.change_percent > 0;
+  const isNegative = point.change_percent < 0;
+  const tone = isPositive
+    ? (inverse ? 'negative' : 'positive')
+    : isNegative
+      ? (inverse ? 'positive' : 'negative')
+      : 'neutral';
+  const prefix = isPositive ? '+' : '';
+
   return (
-    <span
-      className={`fl-delta ${positive ? 'fl-delta-positive' : negative ? 'fl-delta-negative' : 'fl-delta-neutral'} ${compact ? 'fl-delta-compact' : ''}`}
-      title={`Período anterior: ${formatValue(metric.previous)}`}
-    >
-      {sign}{numberFormatter.format(change)}%
+    <span className={`fl-delta fl-delta-${tone}`}>
+      {prefix}{numberFormatter.format(point.change_percent)}% {label}
     </span>
   );
 };
 
-const MetricCell: React.FC<{
-  metric: MetricPoint;
-  suffix?: string;
-  invert?: boolean;
-}> = ({ metric, suffix = '', invert = false }) => (
-  <div className="fl-metric-cell">
-    <strong>{formatValue(metric.value, suffix)}</strong>
-    <DeltaBadge metric={metric} invert={invert} compact />
+const CohortStat: React.FC<{
+  label: string;
+  metric: CohortMetric;
+}> = ({ label, metric }) => (
+  <div className="fl-cohort-stat">
+    <div className="fl-cohort-label">{label}</div>
+    <div className="fl-cohort-value">{formatPercent(metric.value)}</div>
+    <div className="fl-cohort-sample">
+      {metric.denominator > 0
+        ? `${metric.numerator} de ${metric.denominator} usuarios elegibles`
+        : 'Todavía no hay usuarios elegibles'}
+    </div>
+    <DeltaBadge point={metric} label="MoM" />
   </div>
 );
-
-const SegmentTable: React.FC<{
-  rows: SegmentMetric[];
-  label: string;
-}> = ({ rows, label }) => {
-  if (!rows.length) {
-    return <div className="fl-empty fl-empty-compact">Todavía no hay suficientes usuarios para calcular esta métrica.</div>;
-  }
-
-  return (
-    <div className="fl-dashboard-table-scroll" role="region" aria-label={label} tabIndex={0}>
-      <table className="fl-table fl-table-compact fl-segment-table">
-        <thead>
-          <tr>
-            <th>Segmento</th>
-            <th className="fl-table-cell-right">Usuarios analizados</th>
-            <th className="fl-table-cell-right">Activación</th>
-            <th className="fl-table-cell-right">Ret. D7</th>
-            <th className="fl-table-cell-right">Ret. D30</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.name}>
-              <td className="fl-table-title-cell">{row.name}</td>
-              <td className="fl-table-cell-right">{row.users}</td>
-              <td><MetricCell metric={row.activation} suffix="%" /></td>
-              <td><MetricCell metric={row.retention_d7} suffix="%" /></td>
-              <td><MetricCell metric={row.retention_d30} suffix="%" /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-};
 
 const Dashboard: React.FC = () => {
   const [data, setData] = React.useState<MetricResponse | null>(null);
@@ -141,6 +94,7 @@ const Dashboard: React.FC = () => {
   const [preset, setPreset] = React.useState<RangePreset>(30);
   const [draftRange, setDraftRange] = React.useState<DateSelection>(() => rangeForDays(30));
   const [appliedRange, setAppliedRange] = React.useState<DateSelection>(() => rangeForDays(30));
+  const [trendGranularity, setTrendGranularity] = React.useState<TrendGranularity>('weekly');
 
   const loadMetrics = React.useCallback(async (selection: DateSelection, initial = false) => {
     try {
@@ -151,10 +105,9 @@ const Dashboard: React.FC = () => {
       const from = dayjs(selection.from).startOf('day').toDate().toISOString();
       const to = dayjs(selection.to).add(1, 'day').startOf('day').toDate().toISOString();
       const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Argentina/Cordoba';
-      const res = await apiMetrics({ from, to, timezone });
-      setData(res);
-    } catch (e: any) {
-      setErr(e.message || 'Error al cargar métricas');
+      setData(await apiMetrics({ from, to, timezone }));
+    } catch (error: unknown) {
+      setErr(error instanceof Error ? error.message : 'Error al cargar métricas');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -203,42 +156,26 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const hasRecipesPerDay =
-    Array.isArray(data.recipes_per_day) && data.recipes_per_day.length > 0;
-  const hasTopTags = Array.isArray(data.top_tags) && data.top_tags.length > 0;
-  const hasDiets =
-    Array.isArray(data.diets_distribution) && data.diets_distribution.length > 0;
-  const hasAllergies =
-    Array.isArray(data.allergies_distribution) &&
-    data.allergies_distribution.length > 0;
-  const hasTopSaved =
-    Array.isArray(data.top_saved_recipes) &&
-    data.top_saved_recipes.length > 0;
-  const hasTopAuthors =
-    Array.isArray(data.top_source_authors) && data.top_source_authors.length > 0;
-
   const periodDays = dayjs(appliedRange.to).diff(dayjs(appliedRange.from), 'day') + 1;
   const periodLabel = `${dayjs(appliedRange.from).format('DD/MM/YYYY')} – ${dayjs(appliedRange.to).format('DD/MM/YYYY')}`;
-  const chartDay = (value: string) => dayjs(value).format('DD/MM');
-
-  const totalDietUsers = hasDiets
-    ? data.diets_distribution.reduce(
-      (acc: number, d: any) => acc + (d.users || 0),
-      0
-    )
+  const recipeSeries = data.recipe_activity_per_day;
+  const activeSeries = data.trends.active_users[trendGranularity];
+  const importSeries = data.trends.import_success[trendGranularity];
+  const hasRecipeActivity = recipeSeries.some((point) => point.created > 0 || point.saved > 0);
+  const hasActiveTrend = activeSeries.some((point) => point.users > 0);
+  const hasImportTrend = importSeries.some((point) =>
+    point.instagram_attempts > 0 || point.tiktok_attempts > 0
+  );
+  const hasTopTags = data.top_tags.length > 0;
+  const hasDiets = data.diets_distribution.length > 0;
+  const hasAllergies = data.allergies_distribution.length > 0;
+  const hasTopSaved = data.top_saved_recipes.length > 0;
+  const hasTopAuthors = data.top_source_authors.length > 0;
+  const totalUsers = data.data_quality.total_users;
+  const totalMix = data.user_mix.new_users + data.user_mix.returning_users;
+  const returningShare = totalMix
+    ? Math.round((data.user_mix.returning_users / totalMix) * 100)
     : 0;
-
-  const totalAllergyUsers = hasAllergies
-    ? data.allergies_distribution.reduce(
-      (acc: number, a: any) => acc + (a.users || 0),
-      0
-    )
-    : 0;
-
-  const formatPercent = (value: number, total: number) => {
-    if (!total || !value) return '0%';
-    return `${Math.round((value / total) * 100)}%`;
-  };
 
   const tooltipContentStyle: React.CSSProperties = {
     backgroundColor: 'var(--surface-elevated)',
@@ -257,24 +194,36 @@ const Dashboard: React.FC = () => {
     fontSize: 10,
   };
 
+  const comparisonRows: {
+    label: string;
+    key: keyof Pick<
+      MetricResponse['comparisons']['mom'],
+      'new_users' | 'weekly_value_users' | 'recipes_created' | 'import_success_rate'
+    >;
+    percent?: boolean;
+  }[] = [
+    { label: 'Usuarios nuevos', key: 'new_users' },
+    { label: 'Usuarios con valor semanal', key: 'weekly_value_users' },
+    { label: 'Recetas creadas', key: 'recipes_created' },
+    { label: 'Éxito de importación', key: 'import_success_rate', percent: true },
+  ];
+
   return (
     <div className="fl-dashboard-root">
       <header className="fl-dashboard-header">
         <div>
           <h1 className="fl-dashboard-title">Panel de FoodLoops</h1>
           <p className="fl-dashboard-subtitle">
-            Visión general del uso, creación de recetas y comportamientos de la comunidad.
+            Adquisición, valor, retención y salud del producto en una sola lectura.
           </p>
         </div>
-        <div className="fl-dashboard-header-actions">
-          <div className="fl-dashboard-meta">
-            <span className="fl-dashboard-meta-label">Última actualización</span>
-            <span className="fl-dashboard-meta-value">
-              {new Date(data.now).toLocaleString('es-AR', {
-                day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-              })}
-            </span>
-          </div>
+        <div className="fl-dashboard-meta">
+          <span className="fl-dashboard-meta-label">Última actualización</span>
+          <span className="fl-dashboard-meta-value">
+            {new Date(data.now).toLocaleString('es-AR', {
+              day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+            })}
+          </span>
         </div>
       </header>
 
@@ -331,304 +280,325 @@ const Dashboard: React.FC = () => {
 
       {err && <div className="fl-error-badge fl-dashboard-inline-error">{err}</div>}
 
-      <section className="fl-analytics-section" aria-labelledby="product-health-title">
-        <div className="fl-section-heading">
+      <div className="fl-dashboard-grid">
+        <div className="fl-section-heading span-12">
           <div>
-            <span className="fl-section-kicker">Salud del producto</span>
-            <h2 id="product-health-title">Uso, activación y retención</h2>
+            <span className="fl-section-eyebrow">Pulso del producto</span>
+            <h2>Valor y adquisición</h2>
           </div>
-          <p>Las variaciones comparan contra el período inmediatamente anterior de igual duración.</p>
+          <p>La North Star siempre mira los últimos 7 días cerrados por la fecha final elegida.</p>
         </div>
 
-        <div className="fl-product-grid">
-          <Card className="fl-card fl-north-star span-12" title="Usuarios con valor semanal" tooltip={METRIC_HELP.weeklyValue}>
-            <div className="fl-north-star-content">
-              <div>
-                <div className="fl-north-star-value">
-                  {formatValue(data.product_metrics.weekly_value_users.value)}
-                </div>
-                <div className="fl-north-star-label">
-                  Usuarios únicos que crearon, importaron o guardaron una receta en los últimos 7 días.
-                </div>
-              </div>
-              <div className="fl-north-star-comparison">
-                <DeltaBadge metric={data.product_metrics.weekly_value_users} />
-                <span>vs. los 7 días anteriores</span>
-              </div>
-            </div>
-          </Card>
+        <Card className="fl-card fl-kpi fl-kpi-primary span-6" title="North Star · Usuarios con valor semanal">
+          <div className="fl-kpi-value">{data.weekly_value_users}</div>
+          <div className="fl-kpi-label">
+            Usuarios únicos que crearon, importaron o guardaron una receta en 7 días.
+          </div>
+          <DeltaBadge point={data.comparisons.mom.weekly_value_users} label="MoM" />
+        </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Activación en 7 días" tooltip={METRIC_HELP.activation}>
-            <div className="fl-insight-value">
-              {formatValue(data.product_metrics.activation.value, '%')}
-            </div>
-            <DeltaBadge metric={data.product_metrics.activation} />
-            <p>
-              {data.product_metrics.activation.numerator} de {data.product_metrics.activation.denominator} usuarios que ya tuvieron 7 días para usar la app alcanzaron su primer valor.
-            </p>
-          </Card>
+        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos">
+          <div className="fl-kpi-value">{data.new_users}</div>
+          <div className="fl-kpi-label">Registros creados en el período seleccionado.</div>
+          <DeltaBadge point={data.comparisons.mom.new_users} label="MoM" />
+        </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Stickiness DAU / MAU" tooltip={METRIC_HELP.dailyStickiness}>
-            <div className="fl-insight-value">
-              {formatValue(data.product_metrics.engagement.dau_mau_stickiness.value, '%')}
-            </div>
-            <DeltaBadge metric={data.product_metrics.engagement.dau_mau_stickiness} />
-            <p>Proporción de usuarios mensuales que también estuvieron activos en las últimas 24 horas.</p>
-          </Card>
+        <Card className="fl-card fl-kpi span-3" title="Usuarios activos">
+          <div className="fl-kpi-value">{data.active_users}</div>
+          <div className="fl-kpi-label">
+            Usuarios únicos con actividad en los {periodDays} días seleccionados.
+          </div>
+        </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Tiempo al primer valor" tooltip={METRIC_HELP.firstValue}>
-            <div className="fl-insight-value">
-              {formatValue(data.product_metrics.time_to_first_value.median_days.value, ' días')}
-            </div>
-            <DeltaBadge metric={data.product_metrics.time_to_first_value.median_days} invert />
-            <p>
-              Mediana · promedio {formatValue(data.product_metrics.time_to_first_value.average_days.value, ' días')} · muestra {data.product_metrics.time_to_first_value.sample_size}.
-            </p>
-          </Card>
+        <Card className="fl-card span-4" title="Activación en 7 días">
+          <CohortStat label="Nuevos que llegaron a su primera receta" metric={data.activation_7d} />
+        </Card>
 
-          <Card className="fl-card fl-insight-card span-3" title="Intensidad de uso" tooltip={METRIC_HELP.intensity}>
-            <div className="fl-dual-metric">
-              <div>
-                <strong>{formatValue(data.product_metrics.per_active_user.recipes.value)}</strong>
-                <span>recetas / activo</span>
-                <DeltaBadge metric={data.product_metrics.per_active_user.recipes} compact />
-              </div>
-              <div>
-                <strong>{formatValue(data.product_metrics.per_active_user.saves.value)}</strong>
-                <span>guardados / activo</span>
-                <DeltaBadge metric={data.product_metrics.per_active_user.saves} compact />
-              </div>
-            </div>
-          </Card>
+        <Card className="fl-card span-4" title="Retención de nuevos usuarios">
+          <div className="fl-retention-grid">
+            <CohortStat label="D1" metric={data.retention.d1} />
+            <CohortStat label="D7" metric={data.retention.d7} />
+            <CohortStat label="D30" metric={data.retention.d30} />
+          </div>
+        </Card>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Retención de usuarios nuevos" tooltip={METRIC_HELP.retention}>
-            <div className="fl-metric-strip">
-              {([
-                ['D1', data.product_metrics.retention.d1],
-                ['D7', data.product_metrics.retention.d7],
-                ['D30', data.product_metrics.retention.d30],
-              ] as const).map(([label, metric]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <strong>{formatValue(metric.value, '%')}</strong>
-                  <DeltaBadge metric={metric} compact />
-                  <small>{metric.numerator}/{metric.denominator} elegibles</small>
-                </div>
-              ))}
-            </div>
-          </Card>
+        <Card className="fl-card span-4" title="Usuarios nuevos vs. recurrentes">
+          <div className="fl-mix-values">
+            <div><strong>{data.user_mix.new_users}</strong><span>Nuevos activos</span></div>
+            <div><strong>{data.user_mix.returning_users}</strong><span>Recurrentes</span></div>
+          </div>
+          <div className="fl-mix-bar" aria-label={`${returningShare}% de usuarios recurrentes`}>
+            <span style={{ width: `${returningShare}%` }} />
+          </div>
+          <div className="fl-card-footnote">{returningShare}% de la actividad viene de usuarios que vuelven.</div>
+        </Card>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Frecuencia de actividad" tooltip={METRIC_HELP.frequency}>
-            <div className="fl-metric-strip">
-              {([
-                ['DAU', data.product_metrics.engagement.dau],
-                ['WAU', data.product_metrics.engagement.wau],
-                ['MAU', data.product_metrics.engagement.mau],
-              ] as const).map(([label, metric]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <strong>{formatValue(metric.value)}</strong>
-                  <DeltaBadge metric={metric} compact />
-                </div>
-              ))}
-            </div>
-            <div className="fl-panel-footnote">
-              WAU / MAU: {formatValue(data.product_metrics.engagement.wau_mau_stickiness.value, '%')}
-              <DeltaBadge metric={data.product_metrics.engagement.wau_mau_stickiness} compact />
-            </div>
-          </Card>
+        <div className="fl-section-heading span-12">
+          <div>
+            <span className="fl-section-eyebrow">Salud del core</span>
+            <h2>Recetas e importaciones</h2>
+          </div>
+          <p>El éxito se calcula sobre intentos resueltos; pendientes recientes no cuentan como fallas.</p>
+        </div>
 
-          <Card className="fl-card fl-metric-panel span-6" title="Usuarios nuevos vs. recurrentes con actividad" tooltip={METRIC_HELP.userMix}>
-            <div className="fl-metric-strip fl-metric-strip-two">
-              <div>
-                <span>Nuevos activos</span>
-                <strong>{formatValue(data.product_metrics.user_mix.new_users.value)}</strong>
-                <DeltaBadge metric={data.product_metrics.user_mix.new_users} compact />
-              </div>
-              <div>
-                <span>Recurrentes</span>
-                <strong>{formatValue(data.product_metrics.user_mix.returning_users.value)}</strong>
-                <DeltaBadge metric={data.product_metrics.user_mix.returning_users} compact />
-              </div>
-            </div>
-          </Card>
+        <Card className="fl-card fl-kpi span-3" title="Recetas creadas">
+          <div className="fl-kpi-value">{data.recipes_created}</div>
+          <div className="fl-kpi-label">Recetas incorporadas durante el período.</div>
+          <DeltaBadge point={data.comparisons.mom.recipes_created} label="MoM" />
+        </Card>
 
-          <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma" tooltip={METRIC_HELP.imports}>
-            <div className="fl-import-note">
-              {data.product_metrics.import_performance.tracking_since
-                ? `Seguimiento de intentos activo desde ${dayjs(data.product_metrics.import_performance.tracking_since).format('DD/MM/YYYY HH:mm')}.`
-                : 'Los éxitos históricos se estiman por recetas guardadas. Intentos, fallos y tiempos comenzarán a registrarse con esta versión.'}
-            </div>
-            <div className="fl-dashboard-table-scroll" role="region" aria-label="Éxito de importación por plataforma" tabIndex={0}>
-              <table className="fl-table fl-table-compact fl-import-table">
+        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas">
+          <div className="fl-kpi-value">{data.recipes_saved}</div>
+          <div className="fl-kpi-label">Guardados realizados durante el período.</div>
+        </Card>
+
+        <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma">
+          {data.import_performance.tracking_since ? (
+            <>
+              <table className="fl-table fl-import-table">
                 <thead>
                   <tr>
                     <th>Plataforma</th>
-                    <th>Intentos</th>
-                    <th>Éxitos</th>
-                    <th>Fallos</th>
-                    <th>Tasa</th>
-                    <th>Tiempo prom.</th>
-                    <th>Recetas importadas</th>
+                    <th className="fl-table-cell-right">Éxito</th>
+                    <th className="fl-table-cell-right">Resueltos</th>
+                    <th className="fl-table-cell-right">Fallas</th>
+                    <th className="fl-table-cell-right">MoM</th>
+                    <th className="fl-table-cell-right">YoY</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.product_metrics.import_performance.platforms.map((row) => (
-                    <tr key={row.platform}>
-                      <td><span className={`fl-platform-badge fl-platform-${row.platform.toLowerCase()}`}>{row.platform}</span></td>
-                      <td><MetricCell metric={row.attempts_comparison} /></td>
-                      <td><MetricCell metric={row.successes_comparison} /></td>
-                      <td><MetricCell metric={row.failures_comparison} invert /></td>
-                      <td><MetricCell metric={row.success_rate_comparison} suffix="%" /></td>
-                      <td><MetricCell metric={row.duration_comparison} suffix=" s" invert /></td>
-                      <td><MetricCell metric={row.imported_recipes_comparison} /></td>
+                  {data.import_performance.platforms.map((platform) => (
+                    <tr key={platform.platform}>
+                      <td>
+                        <span className={`fl-platform-badge fl-platform-${platform.platform.toLowerCase()}`}>
+                          {platform.platform}
+                        </span>
+                      </td>
+                      <td className="fl-table-number-cell">{formatPercent(platform.success_rate)}</td>
+                      <td className="fl-table-cell-right">{platform.resolved_attempts}</td>
+                      <td className="fl-table-cell-right">{platform.failures}</td>
+                      <td className="fl-table-cell-right"><DeltaBadge point={platform.mom} label="" compact /></td>
+                      <td className="fl-table-cell-right"><DeltaBadge point={platform.yoy} label="" compact /></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
-          </Card>
-
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por país" tooltip={METRIC_HELP.countrySegments}>
-            <SegmentTable rows={data.segments.countries} label="Activación y retención por país" />
-          </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por dieta" tooltip={METRIC_HELP.dietSegments}>
-            <SegmentTable rows={data.segments.diets} label="Activación y retención por dieta" />
-          </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por alergia" tooltip={METRIC_HELP.allergySegments}>
-            <SegmentTable rows={data.segments.allergies} label="Activación y retención por alergia" />
-          </Card>
-          <Card className="fl-card fl-table-card fl-segment-card span-6" title="Activación y retención por plataforma de origen" tooltip={METRIC_HELP.sourceSegments}>
-            <SegmentTable rows={data.segments.source_platforms} label="Activación y retención por plataforma de origen" />
-          </Card>
-        </div>
-      </section>
-
-      <div className="fl-dashboard-grid">
-        {/* KPIs */}
-        <Card className="fl-card fl-kpi span-3" title="Usuarios activos" tooltip={METRIC_HELP.activeUsers}>
-          <div className="fl-kpi-value">{data.active_users}</div>
-          <DeltaBadge metric={data.comparisons.active_users} />
-          <div className="fl-kpi-label">
-            Usuarios únicos con actividad en los {periodDays} días seleccionados
-          </div>
+              <div className="fl-card-footnote">
+                Seguimiento disponible desde {dayjs(data.import_performance.tracking_since).format('DD/MM/YYYY')}.
+              </div>
+            </>
+          ) : (
+            <div className="fl-empty fl-empty-compact">Todavía no hay intentos de importación instrumentados.</div>
+          )}
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos" tooltip={METRIC_HELP.newUsers}>
-          <div className="fl-kpi-value">{data.new_users}</div>
-          <DeltaBadge metric={data.comparisons.new_users} />
-          <div className="fl-kpi-label">
-            Registros creados durante el período seleccionado
-          </div>
-        </Card>
-
-        <Card className="fl-card fl-kpi span-3" title="Recetas creadas" tooltip={METRIC_HELP.recipesCreated}>
-          <div className="fl-kpi-value">{data.recipes_created}</div>
-          <DeltaBadge metric={data.comparisons.recipes_created} />
-          <div className="fl-kpi-label">Recetas incorporadas durante el período seleccionado</div>
-        </Card>
-
-        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas" tooltip={METRIC_HELP.recipesSaved}>
-          <div className="fl-kpi-value">{data.recipes_saved}</div>
-          <DeltaBadge metric={data.comparisons.recipes_saved} />
-          <div className="fl-kpi-label">
-            Guardados realizados durante el período seleccionado
-          </div>
-        </Card>
-
-        {/* Recetas por día (14d) */}
-        <Card
-          className="fl-card span-8"
-          title="Recetas creadas por día"
-          tooltip={METRIC_HELP.recipesByDay}
-        >
+        <Card className="fl-card span-8" title="Recetas creadas y guardadas por día">
           <div className="fl-chart-wrapper">
-            {hasRecipesPerDay ? (
+            {hasRecipeActivity ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={data.recipes_per_day}>
-                  <XAxis dataKey="day" tickFormatter={chartDay} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                  />
+                <LineChart data={recipeSeries}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickFormatter={(value) => dayjs(value).format('DD/MM')} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <Tooltip
                     labelFormatter={(value) => dayjs(String(value)).format('DD/MM/YYYY')}
                     contentStyle={tooltipContentStyle}
                     labelStyle={tooltipLabelStyle}
                     itemStyle={tooltipItemStyle}
-                    cursor={{ stroke: 'var(--border-strong)', strokeWidth: 1 }}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    stroke="var(--accent)"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    activeDot={{ r: 5 }}
-                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Line name="Creadas" type="monotone" dataKey="created" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  <Line name="Guardadas" type="monotone" dataKey="saved" stroke="var(--success)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="fl-empty">
-                Sin datos de recetas creadas en el período seleccionado.
-              </div>
+              <div className="fl-empty">Sin recetas creadas ni guardadas en este período.</div>
             )}
           </div>
         </Card>
 
-        {/* Top tags */}
-        <Card className="fl-card span-4" title="Top tags por uso" tooltip={METRIC_HELP.tags}>
+        <Card className="fl-card span-4" title="Top tags por uso">
           <div className="fl-chart-wrapper">
             {hasTopTags ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.top_tags}
-                  margin={{ top: 4, right: 8, left: -10, bottom: 24 }}
-                >
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 9, fill: 'var(--text-muted)' }}
-                    interval={0}
-                    angle={-25}
-                    textAnchor="end"
-                    height={50}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                    cursor={{ fill: 'var(--surface-hover)' }}
-                  />
-                  <Bar
-                    dataKey="uses"
-                    radius={[4, 4, 0, 0]}
-                    fill="var(--accent)"
-                  />
+                <BarChart data={data.top_tags} margin={{ top: 4, right: 8, left: -10, bottom: 24 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: 'var(--text-muted)' }} interval={0} angle={-25} textAnchor="end" height={50} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
+                  <Bar name="Usos" dataKey="uses" radius={[4, 4, 0, 0]} fill="var(--accent)" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="fl-empty">
-                Todavía no hay suficientes tags para mostrar.
-              </div>
+              <div className="fl-empty">Todavía no hay tags para mostrar.</div>
             )}
           </div>
         </Card>
 
-        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram" tooltip={METRIC_HELP.sourceAuthors}>
+        <div className="fl-section-heading span-12 fl-section-heading-with-control">
+          <div>
+            <span className="fl-section-eyebrow">Tendencias ampliadas</span>
+            <h2>Evolución sostenida</h2>
+          </div>
+          <div className="fl-segmented-control" aria-label="Granularidad de las tendencias">
+            <button type="button" className={trendGranularity === 'weekly' ? 'active' : ''} onClick={() => setTrendGranularity('weekly')}>Semanal</button>
+            <button type="button" className={trendGranularity === 'monthly' ? 'active' : ''} onClick={() => setTrendGranularity('monthly')}>Mensual</button>
+          </div>
+        </div>
+
+        <Card className="fl-card span-6" title="Usuarios activos">
+          <div className="fl-chart-wrapper fl-chart-wrapper-small">
+            {hasActiveTrend ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={activeSeries}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
+                  <Line name="Usuarios activos" type="monotone" dataKey="users" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="fl-empty">Sin actividad suficiente para graficar.</div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="fl-card span-6" title="Éxito de importación">
+          <div className="fl-chart-wrapper fl-chart-wrapper-small">
+            {hasImportTrend ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={importSeries}>
+                  <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Line name="Instagram" type="monotone" connectNulls dataKey="instagram" stroke="#cc4e8b" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line name="TikTok" type="monotone" connectNulls dataKey="tiktok" stroke="var(--text-secondary)" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="fl-empty">Sin importaciones en este período.</div>
+            )}
+          </div>
+        </Card>
+
+        <Card className="fl-card fl-table-card span-12" title="Comparación MoM y YoY">
+          <div className="fl-comparison-note">
+            MoM desplaza el período elegido un mes; YoY usa las mismas fechas del año anterior.
+            Los porcentajes se ocultan cuando la base no llega a {data.data_quality.min_reliable_sample} observaciones.
+          </div>
+          <table className="fl-table fl-comparison-table">
+            <thead>
+              <tr>
+                <th>Indicador</th>
+                <th className="fl-table-cell-right">Actual</th>
+                <th className="fl-table-cell-right">Base MoM</th>
+                <th className="fl-table-cell-right">Cambio MoM</th>
+                <th className="fl-table-cell-right">Base YoY</th>
+                <th className="fl-table-cell-right">Cambio YoY</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparisonRows.map((row) => {
+                const mom = data.comparisons.mom[row.key];
+                const yoy = data.comparisons.yoy[row.key];
+                const formatter = row.percent ? formatPercent : formatValue;
+                return (
+                  <tr key={row.key}>
+                    <td className="fl-table-title-cell">{row.label}</td>
+                    <td className="fl-table-number-cell">{formatter(mom.value)}</td>
+                    <td className="fl-table-cell-right">{formatter(mom.previous)}</td>
+                    <td className="fl-table-cell-right"><DeltaBadge point={mom} label="" /></td>
+                    <td className="fl-table-cell-right">{formatter(yoy.previous)}</td>
+                    <td className="fl-table-cell-right"><DeltaBadge point={yoy} label="" /></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+
+        <div className="fl-section-heading span-12">
+          <div>
+            <span className="fl-section-eyebrow">Dirección de producto</span>
+            <h2>Preferencias y contenido</h2>
+          </div>
+          <p>Distribuciones simples para decidir qué adaptar, destacar y promocionar.</p>
+        </div>
+
+        <Card className="fl-card fl-table-card fl-scroll-table-card span-6" title="Preferencias declaradas · Estado actual">
+          <div
+            className="fl-dashboard-table-scroll"
+            role="region"
+            aria-label="Preferencias declaradas"
+            tabIndex={0}
+          >
+            <div className="fl-preferences-grid">
+            <div>
+              <h4>Dietas</h4>
+              {hasDiets ? (
+                <table className="fl-table fl-table-compact">
+                  <tbody>
+                    {data.diets_distribution.slice(0, 8).map((item) => (
+                      <tr key={item.name}>
+                        <td className="fl-table-title-cell">{item.name}</td>
+                        <td className="fl-table-cell-right">{item.users}</td>
+                        <td className="fl-table-cell-right">{totalUsers ? Math.round((item.users / totalUsers) * 100) : 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <div className="fl-empty fl-empty-compact">Sin dietas declaradas.</div>}
+            </div>
+            <div>
+              <h4>Alergias</h4>
+              {hasAllergies ? (
+                <table className="fl-table fl-table-compact">
+                  <tbody>
+                    {data.allergies_distribution.slice(0, 8).map((item) => (
+                      <tr key={item.name}>
+                        <td className="fl-table-title-cell">{item.name}</td>
+                        <td className="fl-table-cell-right">{item.users}</td>
+                        <td className="fl-table-cell-right">{totalUsers ? Math.round((item.users / totalUsers) * 100) : 0}%</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <div className="fl-empty fl-empty-compact">Sin alergias declaradas.</div>}
+            </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="fl-card fl-table-card fl-scroll-table-card span-6" title="Recetas más guardadas">
+          {hasTopSaved ? (
+            <div
+              className="fl-dashboard-table-scroll"
+              role="region"
+              aria-label="Recetas más guardadas"
+              tabIndex={0}
+            >
+              <table className="fl-table">
+                <thead><tr><th>Receta</th><th className="fl-table-cell-right">Guardados</th></tr></thead>
+                <tbody>
+                  {data.top_saved_recipes.map((recipe) => (
+                    <tr key={recipe.id_recipe}>
+                      <td className="fl-table-title-cell">{recipe.title}</td>
+                      <td className="fl-table-number-cell">{recipe.saves}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : <div className="fl-empty fl-empty-compact">Todavía no hay recetas guardadas en este período.</div>}
+        </Card>
+
+        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram">
           {hasTopAuthors ? (
             <table className="fl-table fl-authors-table">
               <thead>
-                <tr>
-                  <th className="fl-authors-rank">#</th>
-                  <th>Autor</th>
-                  <th>Plataforma</th>
-                  <th className="fl-table-cell-right">Recetas</th>
-                  <th className="fl-table-cell-right">Guardados</th>
-                </tr>
+                <tr><th className="fl-authors-rank">#</th><th>Autor</th><th>Plataforma</th><th className="fl-table-cell-right">Recetas</th><th className="fl-table-cell-right">Guardados</th></tr>
               </thead>
               <tbody>
                 {data.top_source_authors.map((author, index) => (
@@ -642,126 +612,38 @@ const Dashboard: React.FC = () => {
                 ))}
               </tbody>
             </table>
-          ) : (
-            <div className="fl-empty fl-empty-compact">
-              No hay autores identificados de TikTok o Instagram en este período.
-            </div>
-          )}
+          ) : <div className="fl-empty fl-empty-compact">No hay autores identificados en este período.</div>}
         </Card>
 
-        {/* Estilos de alimentación - tabla */}
-        <Card
-          className="fl-card fl-table-card fl-scroll-table-card span-4"
-          title="Estilos de alimentación declarados · Estado actual"
-          tooltip={METRIC_HELP.diets}
-        >
-          {hasDiets ? (
-            <div
-              className="fl-dashboard-table-scroll"
-              role="region"
-              aria-label="Estilos de alimentación declarados"
-              tabIndex={0}
-            >
-              <table className="fl-table fl-table-compact-1">
-                <thead>
-                  <tr>
-                    <th>Estilo</th>
-                    <th className="fl-table-cell-right">Usuarios</th>
-                    <th className="fl-table-cell-right">% usuarios</th>
+        <Card className="fl-card fl-table-card span-12" title="Lectura estacional · Hemisferio sur">
+          <div className={`fl-season-status ${data.seasonality.reliable ? 'reliable' : ''}`}>
+            <strong>{data.seasonality.coverage_months} meses de historia</strong>
+            <span>
+              {data.seasonality.reliable
+                ? 'Ya hay base anual para detectar patrones; la confianza crecerá al completar un segundo año.'
+                : 'Lectura inicial: hace falta al menos un año completo para separar tendencia de estacionalidad.'}
+            </span>
+          </div>
+          {data.seasonality.seasons.length ? (
+            <table className="fl-table fl-season-table">
+              <thead>
+                <tr><th>Estación</th><th>Período</th><th className="fl-table-cell-right">Usuarios con valor</th><th className="fl-table-cell-right">Creadas</th><th className="fl-table-cell-right">Guardadas</th><th>Tag destacado</th><th>Estado</th></tr>
+              </thead>
+              <tbody>
+                {data.seasonality.seasons.map((season) => (
+                  <tr key={`${season.season}-${season.period}`}>
+                    <td className="fl-table-title-cell">{season.season}</td>
+                    <td>{season.period}</td>
+                    <td className="fl-table-cell-right">{season.value_users}</td>
+                    <td className="fl-table-cell-right">{season.recipes_created}</td>
+                    <td className="fl-table-cell-right">{season.recipes_saved}</td>
+                    <td>{season.top_tag ?? '—'}</td>
+                    <td><span className={`fl-season-chip ${season.complete ? '' : 'current'}`}>{season.complete ? 'Completa' : 'En curso'}</span></td>
                   </tr>
-                </thead>
-                <tbody>
-                  {data.diets_distribution.map((d: any) => (
-                    <tr key={d.name}>
-                      <td className="fl-table-title-cell">{d.name}</td>
-                      <td className="fl-table-cell-right">{d.users}</td>
-                      <td className="fl-table-cell-right">
-                        {formatPercent(d.users, totalDietUsers)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="fl-empty">
-              Sin preferencias de alimentación configuradas aún.
-            </div>
-          )}
-        </Card>
-
-        {/* Alergias - tabla */}
-        <Card
-          className="fl-card fl-table-card fl-scroll-table-card span-4"
-          title="Alergias reportadas por usuarios · Estado actual"
-          tooltip={METRIC_HELP.allergies}
-        >
-          {hasAllergies ? (
-            <div
-              className="fl-dashboard-table-scroll"
-              role="region"
-              aria-label="Alergias reportadas por usuarios"
-              tabIndex={0}
-            >
-              <table className="fl-table fl-table-compact">
-                <thead>
-                  <tr>
-                    <th>Alergia</th>
-                    <th className="fl-table-cell-right">Usuarios</th>
-                    <th className="fl-table-cell-right">% usuarios</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.allergies_distribution.map((a: any) => (
-                    <tr key={a.name}>
-                      <td className="fl-table-title-cell">{a.name}</td>
-                      <td className="fl-table-cell-right">{a.users}</td>
-                      <td className="fl-table-cell-right">
-                        {formatPercent(a.users, totalAllergyUsers)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="fl-empty">
-              Sin datos suficientes de alergias por ahora.
-            </div>
-          )}
-        </Card>
-
-        {/* Recetas más guardadas */}
-        <Card className="fl-card fl-table-card fl-scroll-table-card span-4" title="Recetas más guardadas" tooltip={METRIC_HELP.topSaved}>
-          {hasTopSaved ? (
-            <div
-              className="fl-dashboard-table-scroll"
-              role="region"
-              aria-label="Recetas más guardadas"
-              tabIndex={0}
-            >
-              <table className="fl-table">
-                <thead>
-                  <tr>
-                    <th>Receta</th>
-                    <th className="fl-table-cell-right">Guardados</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.top_saved_recipes.map((r: any) => (
-                    <tr key={r.id_recipe}>
-                      <td className="fl-table-title-cell">{r.title}</td>
-                      <td className="fl-table-number-cell">{r.saves}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="fl-empty">
-              Cuando haya suficientes recetas guardadas, las vas a ver acá.
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          ) : <div className="fl-empty fl-empty-compact">Todavía no hay historia para una lectura estacional.</div>}
         </Card>
       </div>
     </div>
