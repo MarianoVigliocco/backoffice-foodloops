@@ -1,6 +1,5 @@
 // src/lib/api.ts
 import { EDGE_BASE, supabase } from './supabaseClient';
-import type { ReportId } from './reports';
 
 export type MetricPoint = {
     value: number | null;
@@ -255,6 +254,8 @@ export async function apiRecipeUpdate(payload: any) {
 
 /* -------- REPORTS -------- */
 
+export type LegacyReportId = 'usage' | 'recipes' | 'users';
+
 export type ReportColumn = {
     key: string;
     label: string;
@@ -264,7 +265,7 @@ export type ReportColumn = {
 
 export type ReportPreview = {
     report: {
-        id: ReportId;
+        id: LegacyReportId;
         title: string;
         generated_at: string;
         range: {
@@ -287,7 +288,7 @@ export type ReportPreview = {
 };
 
 export type ReportParams = {
-    type: ReportId;
+    type: LegacyReportId;
     from: string;
     to: string;
     timezone: string;

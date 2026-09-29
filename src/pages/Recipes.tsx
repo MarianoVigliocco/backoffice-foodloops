@@ -171,7 +171,7 @@ const Recipes: React.FC = () => {
         <div>
           <h1 className="fl-recipes-title">Recetas</h1>
           <p className="fl-recipes-subtitle">
-            Explorá, revisá y ajustá las recetas creadas a partir del contenido de la comunidad.
+            Explorá, revisá y ajustá las recetas importadas desde links de Instagram o TikTok.
           </p>
         </div>
         <div className="fl-recipes-meta">
@@ -192,7 +192,7 @@ const Recipes: React.FC = () => {
                 <th>Cal/porción</th>
                 <th>Dificultad</th>
                 <th>Origen</th>
-                <th>Creada</th>
+                <th>Importada</th>
                 <th className="fl-recipes-th-actions">Acciones</th>
               </tr>
             </thead>

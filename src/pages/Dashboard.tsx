@@ -24,6 +24,27 @@ import '../styles/dashboard.css';
 type DateSelection = { from: string; to: string };
 type RangePreset = 7 | 30 | 90 | 'custom';
 type TrendGranularity = 'weekly' | 'monthly';
+type RecipeGranularity = 'daily' | 'weekly' | 'monthly';
+type RecipeActivityPoint = { day: string; created: number; saved: number };
+
+const DASHBOARD_TOOLTIPS = {
+  weeklyValueUsers: 'Cantidad de usuarios únicos que, durante los últimos 7 días cerrados por la fecha final elegida, importaron una receta desde Instagram o TikTok, o guardaron una receta.',
+  newUsers: 'Cantidad de cuentas creadas dentro del período seleccionado. La variación MoM compara este valor con el mismo rango desplazado un mes.',
+  activeUsers: 'Usuarios únicos que tuvieron actividad dentro del período: importaron o guardaron recetas, conversaron con FoodLoops o usaron la planificación de comidas.',
+  activation: 'Porcentaje de usuarios nuevos que realizaron su primera acción de valor —importar una receta desde Instagram o TikTok, o guardar una receta— dentro de los 7 días posteriores a registrarse.',
+  retention: 'Porcentaje de cada cohorte de usuarios nuevos que volvió a tener actividad 1, 7 o 30 días después de registrarse.',
+  userMix: 'Compara usuarios activos registrados durante el período con usuarios activos que ya existían antes de que comenzara.',
+  recipesImported: 'Cantidad de recetas incorporadas en el período mediante links de Instagram o TikTok. FoodLoops no permite crear recetas manualmente.',
+  importPerformance: 'Tasa de intentos de importación resueltos correctamente por plataforma. Los intentos todavía pendientes no se cuentan como fallas.',
+  recipeActivity: 'Evolución de las recetas importadas desde Instagram o TikTok y de las acciones de guardado dentro del período seleccionado. La información puede agruparse por día, semana o mes.',
+  topTags: 'Etiquetas más utilizadas por las recetas visibles en el período y cantidad de apariciones de cada una.',
+  activeUsersTrend: 'Evolución semanal o mensual de usuarios únicos que realizaron una acción relevante.',
+  importTrend: 'Evolución semanal o mensual del porcentaje de importaciones resueltas correctamente en Instagram y TikTok.',
+  comparisons: 'Compara los indicadores actuales con el mismo rango desplazado un mes (MoM) y con las mismas fechas del año anterior (YoY).',
+  preferences: 'Distribución actual de dietas y alergias declaradas por los usuarios, independientemente del rango temporal elegido.',
+  sourceAuthors: 'Autores originales de TikTok e Instagram con más recetas importadas y guardados asociados dentro del período.',
+  seasonality: 'Agrupa la actividad por estaciones del hemisferio sur para detectar patrones anuales de uso y contenido.',
+} as const;
 
 const today = () => dayjs().format('YYYY-MM-DD');
 const rangeForDays = (days: number): DateSelection => ({
@@ -43,6 +64,100 @@ const formatTrendPeriod = (value: string) =>
   value.length === 7
     ? dayjs(`${value}-01`).format('MMM YY')
     : dayjs(value).format('DD/MM');
+
+const recipePeriodStart = (day: string, granularity: RecipeGranularity) => {
+  const date = dayjs(day);
+  if (granularity === 'monthly') return date.startOf('month').format('YYYY-MM-DD');
+  if (granularity === 'weekly') {
+    const daysSinceMonday = (date.day() + 6) % 7;
+    return date.subtract(daysSinceMonday, 'day').format('YYYY-MM-DD');
+  }
+  return date.format('YYYY-MM-DD');
+};
+
+const aggregateRecipeActivity = (
+  series: RecipeActivityPoint[],
+  granularity: RecipeGranularity,
+) => {
+  if (granularity === 'daily') return series;
+
+  const grouped = new Map<string, RecipeActivityPoint>();
+  series.forEach((point) => {
+    const day = recipePeriodStart(point.day, granularity);
+    const current = grouped.get(day) ?? { day, created: 0, saved: 0 };
+    current.created += point.created;
+    current.saved += point.saved;
+    grouped.set(day, current);
+  });
+
+  return Array.from(grouped.values()).sort((a, b) => a.day.localeCompare(b.day));
+};
+
+const formatRecipePeriod = (value: string, granularity: RecipeGranularity) => {
+  if (granularity === 'monthly') return dayjs(value).format('MMM YY');
+  if (granularity === 'weekly') {
+    return `${dayjs(value).format('DD/MM')}–${dayjs(value).add(6, 'day').format('DD/MM')}`;
+  }
+  return dayjs(value).format('DD/MM');
+};
+
+const formatRecipeTooltipPeriod = (value: string, granularity: RecipeGranularity) => {
+  if (granularity === 'monthly') return dayjs(value).format('MMMM YYYY');
+  if (granularity === 'weekly') {
+    return `Semana del ${dayjs(value).format('DD/MM/YYYY')} al ${dayjs(value).add(6, 'day').format('DD/MM/YYYY')}`;
+  }
+  return dayjs(value).format('DD/MM/YYYY');
+};
+
+const CalendarDateInput: React.FC<{
+  id: string;
+  label: string;
+  value: string;
+  min?: string;
+  max?: string;
+  onChange: (value: string) => void;
+}> = ({ id, label, value, min, max, onChange }) => {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const openCalendar = () => {
+    const input = inputRef.current;
+    if (!input) return;
+    try {
+      input.showPicker();
+    } catch {
+      input.focus();
+      input.click();
+    }
+  };
+
+  return (
+    <div className="fl-date-field">
+      <label htmlFor={id}>{label}</label>
+      <div className="fl-date-input-wrap">
+        <input
+          ref={inputRef}
+          id={id}
+          type="date"
+          value={value}
+          min={min}
+          max={max}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          type="button"
+          className="fl-date-calendar-button"
+          aria-label={`Abrir calendario para ${label.toLowerCase()}`}
+          onClick={openCalendar}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2" />
+            <path d="M16 3v4M8 3v4M3 10h18" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const DeltaBadge: React.FC<{
   point: MetricPoint;
@@ -95,6 +210,7 @@ const Dashboard: React.FC = () => {
   const [draftRange, setDraftRange] = React.useState<DateSelection>(() => rangeForDays(30));
   const [appliedRange, setAppliedRange] = React.useState<DateSelection>(() => rangeForDays(30));
   const [trendGranularity, setTrendGranularity] = React.useState<TrendGranularity>('weekly');
+  const [recipeGranularity, setRecipeGranularity] = React.useState<RecipeGranularity>('daily');
 
   const loadMetrics = React.useCallback(async (selection: DateSelection, initial = false) => {
     try {
@@ -158,7 +274,7 @@ const Dashboard: React.FC = () => {
 
   const periodDays = dayjs(appliedRange.to).diff(dayjs(appliedRange.from), 'day') + 1;
   const periodLabel = `${dayjs(appliedRange.from).format('DD/MM/YYYY')} – ${dayjs(appliedRange.to).format('DD/MM/YYYY')}`;
-  const recipeSeries = data.recipe_activity_per_day;
+  const recipeSeries = aggregateRecipeActivity(data.recipe_activity_per_day, recipeGranularity);
   const activeSeries = data.trends.active_users[trendGranularity];
   const importSeries = data.trends.import_success[trendGranularity];
   const hasRecipeActivity = recipeSeries.some((point) => point.created > 0 || point.saved > 0);
@@ -169,7 +285,6 @@ const Dashboard: React.FC = () => {
   const hasTopTags = data.top_tags.length > 0;
   const hasDiets = data.diets_distribution.length > 0;
   const hasAllergies = data.allergies_distribution.length > 0;
-  const hasTopSaved = data.top_saved_recipes.length > 0;
   const hasTopAuthors = data.top_source_authors.length > 0;
   const totalUsers = data.data_quality.total_users;
   const totalMix = data.user_mix.new_users + data.user_mix.returning_users;
@@ -204,7 +319,7 @@ const Dashboard: React.FC = () => {
   }[] = [
     { label: 'Usuarios nuevos', key: 'new_users' },
     { label: 'Usuarios con valor semanal', key: 'weekly_value_users' },
-    { label: 'Recetas creadas', key: 'recipes_created' },
+    { label: 'Recetas importadas', key: 'recipes_created' },
     { label: 'Éxito de importación', key: 'import_success_rate', percent: true },
   ];
 
@@ -247,31 +362,27 @@ const Dashboard: React.FC = () => {
           ))}
         </div>
         <div className="fl-date-custom">
-          <label>
-            Desde
-            <input
-              type="date"
-              value={draftRange.from}
-              max={draftRange.to || today()}
-              onChange={(event) => {
-                setPreset('custom');
-                setDraftRange((current) => ({ ...current, from: event.target.value }));
-              }}
-            />
-          </label>
-          <label>
-            Hasta
-            <input
-              type="date"
-              value={draftRange.to}
-              min={draftRange.from}
-              max={today()}
-              onChange={(event) => {
-                setPreset('custom');
-                setDraftRange((current) => ({ ...current, to: event.target.value }));
-              }}
-            />
-          </label>
+          <CalendarDateInput
+            id="dashboard-date-from"
+            label="Desde"
+            value={draftRange.from}
+            max={draftRange.to || today()}
+            onChange={(value) => {
+              setPreset('custom');
+              setDraftRange((current) => ({ ...current, from: value }));
+            }}
+          />
+          <CalendarDateInput
+            id="dashboard-date-to"
+            label="Hasta"
+            value={draftRange.to}
+            min={draftRange.from}
+            max={today()}
+            onChange={(value) => {
+              setPreset('custom');
+              setDraftRange((current) => ({ ...current, to: value }));
+            }}
+          />
           <button type="button" className="fl-date-apply" onClick={applyCustomRange} disabled={refreshing}>
             Aplicar
           </button>
@@ -289,32 +400,32 @@ const Dashboard: React.FC = () => {
           <p>La North Star siempre mira los últimos 7 días cerrados por la fecha final elegida.</p>
         </div>
 
-        <Card className="fl-card fl-kpi fl-kpi-primary span-6" title="North Star · Usuarios con valor semanal">
+        <Card className="fl-card fl-kpi fl-kpi-primary span-6" title="North Star · Usuarios con valor semanal" tooltip={DASHBOARD_TOOLTIPS.weeklyValueUsers}>
           <div className="fl-kpi-value">{data.weekly_value_users}</div>
           <div className="fl-kpi-label">
-            Usuarios únicos que crearon, importaron o guardaron una receta en 7 días.
+            Usuarios únicos que importaron o guardaron una receta en 7 días.
           </div>
           <DeltaBadge point={data.comparisons.mom.weekly_value_users} label="MoM" />
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos">
+        <Card className="fl-card fl-kpi span-3" title="Usuarios nuevos" tooltip={DASHBOARD_TOOLTIPS.newUsers}>
           <div className="fl-kpi-value">{data.new_users}</div>
           <div className="fl-kpi-label">Registros creados en el período seleccionado.</div>
           <DeltaBadge point={data.comparisons.mom.new_users} label="MoM" />
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Usuarios activos">
+        <Card className="fl-card fl-kpi span-3" title="Usuarios activos" tooltip={DASHBOARD_TOOLTIPS.activeUsers}>
           <div className="fl-kpi-value">{data.active_users}</div>
           <div className="fl-kpi-label">
             Usuarios únicos con actividad en los {periodDays} días seleccionados.
           </div>
         </Card>
 
-        <Card className="fl-card span-4" title="Activación en 7 días">
-          <CohortStat label="Nuevos que llegaron a su primera receta" metric={data.activation_7d} />
+        <Card className="fl-card span-4" title="Activación en 7 días" tooltip={DASHBOARD_TOOLTIPS.activation}>
+          <CohortStat label="Nuevos con su primera acción de valor" metric={data.activation_7d} />
         </Card>
 
-        <Card className="fl-card span-4" title="Retención de nuevos usuarios">
+        <Card className="fl-card span-4" title="Retención de nuevos usuarios" tooltip={DASHBOARD_TOOLTIPS.retention}>
           <div className="fl-retention-grid">
             <CohortStat label="D1" metric={data.retention.d1} />
             <CohortStat label="D7" metric={data.retention.d7} />
@@ -322,7 +433,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card span-4" title="Usuarios nuevos vs. recurrentes">
+        <Card className="fl-card span-4" title="Usuarios nuevos vs. recurrentes" tooltip={DASHBOARD_TOOLTIPS.userMix}>
           <div className="fl-mix-values">
             <div><strong>{data.user_mix.new_users}</strong><span>Nuevos activos</span></div>
             <div><strong>{data.user_mix.returning_users}</strong><span>Recurrentes</span></div>
@@ -341,18 +452,13 @@ const Dashboard: React.FC = () => {
           <p>El éxito se calcula sobre intentos resueltos; pendientes recientes no cuentan como fallas.</p>
         </div>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas creadas">
+        <Card className="fl-card fl-kpi span-3" title="Recetas importadas" tooltip={DASHBOARD_TOOLTIPS.recipesImported}>
           <div className="fl-kpi-value">{data.recipes_created}</div>
-          <div className="fl-kpi-label">Recetas incorporadas durante el período.</div>
+          <div className="fl-kpi-label">Importadas desde Instagram o TikTok durante el período.</div>
           <DeltaBadge point={data.comparisons.mom.recipes_created} label="MoM" />
         </Card>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas guardadas">
-          <div className="fl-kpi-value">{data.recipes_saved}</div>
-          <div className="fl-kpi-label">Guardados realizados durante el período.</div>
-        </Card>
-
-        <Card className="fl-card fl-table-card span-6" title="Éxito de importación por plataforma">
+        <Card className="fl-card fl-table-card span-9" title="Éxito de importación por plataforma" tooltip={DASHBOARD_TOOLTIPS.importPerformance}>
           {data.import_performance.tracking_since ? (
             <>
               <table className="fl-table fl-import-table">
@@ -392,32 +498,51 @@ const Dashboard: React.FC = () => {
           )}
         </Card>
 
-        <Card className="fl-card span-8" title="Recetas creadas y guardadas por día">
-          <div className="fl-chart-wrapper">
+        <Card className="fl-card span-8" title="Recetas importadas y guardadas" tooltip={DASHBOARD_TOOLTIPS.recipeActivity}>
+          <div className="fl-chart-toolbar">
+            <div className="fl-segmented-control" aria-label="Agrupación de recetas importadas y guardadas">
+              {([
+                ['daily', 'Día'],
+                ['weekly', 'Semana'],
+                ['monthly', 'Mes'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={recipeGranularity === value ? 'active' : ''}
+                  aria-pressed={recipeGranularity === value}
+                  onClick={() => setRecipeGranularity(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="fl-chart-wrapper fl-recipe-chart-wrapper">
             {hasRecipeActivity ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={recipeSeries}>
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={(value) => dayjs(value).format('DD/MM')} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <XAxis dataKey="day" tickFormatter={(value) => formatRecipePeriod(String(value), recipeGranularity)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <Tooltip
-                    labelFormatter={(value) => dayjs(String(value)).format('DD/MM/YYYY')}
+                    labelFormatter={(value) => formatRecipeTooltipPeriod(String(value), recipeGranularity)}
                     contentStyle={tooltipContentStyle}
                     labelStyle={tooltipLabelStyle}
                     itemStyle={tooltipItemStyle}
                   />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Line name="Creadas" type="monotone" dataKey="created" stroke="var(--accent)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
-                  <Line name="Guardadas" type="monotone" dataKey="saved" stroke="var(--success)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                  <Line name="Importadas" type="monotone" dataKey="created" stroke="var(--accent)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
+                  <Line name="Guardadas" type="monotone" dataKey="saved" stroke="var(--success)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="fl-empty">Sin recetas creadas ni guardadas en este período.</div>
+              <div className="fl-empty">Sin recetas importadas ni guardadas en este período.</div>
             )}
           </div>
         </Card>
 
-        <Card className="fl-card span-4" title="Top tags por uso">
+        <Card className="fl-card span-4" title="Top tags por uso" tooltip={DASHBOARD_TOOLTIPS.topTags}>
           <div className="fl-chart-wrapper">
             {hasTopTags ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -445,7 +570,7 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <Card className="fl-card span-6" title="Usuarios activos">
+        <Card className="fl-card span-6" title="Usuarios activos" tooltip={DASHBOARD_TOOLTIPS.activeUsersTrend}>
           <div className="fl-chart-wrapper fl-chart-wrapper-small">
             {hasActiveTrend ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -463,7 +588,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card span-6" title="Éxito de importación">
+        <Card className="fl-card span-6" title="Éxito de importación" tooltip={DASHBOARD_TOOLTIPS.importTrend}>
           <div className="fl-chart-wrapper fl-chart-wrapper-small">
             {hasImportTrend ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -483,7 +608,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card fl-table-card span-12" title="Comparación MoM y YoY">
+        <Card className="fl-card fl-table-card span-12" title="Comparación MoM y YoY" tooltip={DASHBOARD_TOOLTIPS.comparisons}>
           <div className="fl-comparison-note">
             MoM desplaza el período elegido un mes; YoY usa las mismas fechas del año anterior.
             Los porcentajes se ocultan cuando la base no llega a {data.data_quality.min_reliable_sample} observaciones.
@@ -527,7 +652,7 @@ const Dashboard: React.FC = () => {
           <p>Distribuciones simples para decidir qué adaptar, destacar y promocionar.</p>
         </div>
 
-        <Card className="fl-card fl-table-card fl-scroll-table-card span-6" title="Preferencias declaradas · Estado actual">
+        <Card className="fl-card fl-table-card fl-scroll-table-card span-12" title="Preferencias declaradas · Estado actual" tooltip={DASHBOARD_TOOLTIPS.preferences}>
           <div
             className="fl-dashboard-table-scroll"
             role="region"
@@ -571,30 +696,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card fl-table-card fl-scroll-table-card span-6" title="Recetas más guardadas">
-          {hasTopSaved ? (
-            <div
-              className="fl-dashboard-table-scroll"
-              role="region"
-              aria-label="Recetas más guardadas"
-              tabIndex={0}
-            >
-              <table className="fl-table">
-                <thead><tr><th>Receta</th><th className="fl-table-cell-right">Guardados</th></tr></thead>
-                <tbody>
-                  {data.top_saved_recipes.map((recipe) => (
-                    <tr key={recipe.id_recipe}>
-                      <td className="fl-table-title-cell">{recipe.title}</td>
-                      <td className="fl-table-number-cell">{recipe.saves}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <div className="fl-empty fl-empty-compact">Todavía no hay recetas guardadas en este período.</div>}
-        </Card>
-
-        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram">
+        <Card className="fl-card fl-table-card span-12" title="Top autores originales de TikTok e Instagram" tooltip={DASHBOARD_TOOLTIPS.sourceAuthors}>
           {hasTopAuthors ? (
             <table className="fl-table fl-authors-table">
               <thead>
@@ -615,7 +717,7 @@ const Dashboard: React.FC = () => {
           ) : <div className="fl-empty fl-empty-compact">No hay autores identificados en este período.</div>}
         </Card>
 
-        <Card className="fl-card fl-table-card span-12" title="Lectura estacional · Hemisferio sur">
+        <Card className="fl-card fl-table-card span-12" title="Lectura estacional · Hemisferio sur" tooltip={DASHBOARD_TOOLTIPS.seasonality}>
           <div className={`fl-season-status ${data.seasonality.reliable ? 'reliable' : ''}`}>
             <strong>{data.seasonality.coverage_months} meses de historia</strong>
             <span>
@@ -627,7 +729,7 @@ const Dashboard: React.FC = () => {
           {data.seasonality.seasons.length ? (
             <table className="fl-table fl-season-table">
               <thead>
-                <tr><th>Estación</th><th>Período</th><th className="fl-table-cell-right">Usuarios con valor</th><th className="fl-table-cell-right">Creadas</th><th className="fl-table-cell-right">Guardadas</th><th>Tag destacado</th><th>Estado</th></tr>
+                <tr><th>Estación</th><th>Período</th><th className="fl-table-cell-right">Usuarios con valor</th><th className="fl-table-cell-right">Importadas</th><th className="fl-table-cell-right">Guardadas</th><th>Tag destacado</th><th>Estado</th></tr>
               </thead>
               <tbody>
                 {data.seasonality.seasons.map((season) => (
