@@ -10,6 +10,7 @@ import Reports from './pages/Reports';
 import './styles.css';
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider } from './theme';
+import { DemoModeProvider } from './demoMode';
 
 const Protected: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const [ok, setOk] = React.useState<boolean | null>(null);
@@ -39,8 +40,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider>
-      <RouterProvider router={router} />
-    </ThemeProvider>
+    <DemoModeProvider>
+      <ThemeProvider>
+        <RouterProvider router={router} />
+      </ThemeProvider>
+    </DemoModeProvider>
   </React.StrictMode>
 );

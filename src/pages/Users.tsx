@@ -8,6 +8,7 @@ import {
 } from '../lib/api';
 import type { UserRow } from '../types';
 import '../styles/users.css';
+import { useDemoMode } from '../demoMode';
 
 const pageSize = 20;
 
@@ -17,6 +18,7 @@ type PendingToggle = {
 };
 
 const Users: React.FC = () => {
+  const { isDemoMode } = useDemoMode();
   const [rows, setRows] = React.useState<UserRow[]>([]);
   const [q, setQ] = React.useState('');
   const [page, setPage] = React.useState(1);
@@ -52,11 +54,16 @@ const Users: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, q, sortBy, sortDirection]);
+  }, [isDemoMode, page, q, sortBy, sortDirection]);
 
   React.useEffect(() => {
     load();
   }, [load]);
+
+  React.useEffect(() => {
+    setPage(1);
+    setPendingToggle(null);
+  }, [isDemoMode]);
 
   const onSearch = () => setPage(1);
 
@@ -216,8 +223,10 @@ const Users: React.FC = () => {
                       <button
                         className="fl-users-btn fl-users-btn-ghost"
                         onClick={() => openToggleConfirmation(user)}
+                        disabled={isDemoMode}
+                        title={isDemoMode ? 'El modo demo es de sólo lectura' : undefined}
                       >
-                        {enabled ? 'Desactivar' : 'Reactivar'}
+                        {isDemoMode ? 'Sólo lectura' : enabled ? 'Desactivar' : 'Reactivar'}
                       </button>
                     </td>
                   </tr>

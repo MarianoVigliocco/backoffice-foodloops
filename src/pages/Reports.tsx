@@ -13,6 +13,7 @@ import {
   type ReportId,
 } from '../lib/reports';
 import '../styles/reports.css';
+import { useDemoMode } from '../demoMode';
 
 type DateSelection = { from: string; to: string };
 type RangePreset = 7 | 30 | 90 | 'custom';
@@ -85,6 +86,7 @@ const CalendarDateInput: React.FC<{
 };
 
 const Reports: React.FC = () => {
+  const { isDemoMode } = useDemoMode();
   const [selectedId, setSelectedId] = React.useState<ReportId>('executive');
   const [selectedFormat, setSelectedFormat] = React.useState<ReportFormat>('pdf');
   const [preset, setPreset] = React.useState<RangePreset>(30);
@@ -116,7 +118,7 @@ const Reports: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [timezone]);
+  }, [isDemoMode, timezone]);
 
   React.useEffect(() => {
     loadMetrics(appliedRange, !metrics);
@@ -161,6 +163,7 @@ const Reports: React.FC = () => {
         metrics,
         period: formatPeriod(appliedRange),
         timezone,
+        isDemoMode,
       };
       if (selectedFormat === 'pdf') await exportReportPdf(context);
       else await exportReportExcel(context);

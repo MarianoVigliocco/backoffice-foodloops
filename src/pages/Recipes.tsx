@@ -2,10 +2,12 @@ import React from 'react';
 import Card from '../components/Card';
 import { apiRecipesList, apiRecipeUpdate } from '../lib/api';
 import '../styles/recipes.css';
+import { useDemoMode } from '../demoMode';
 
 const pageSize = 20;
 
 const Recipes: React.FC = () => {
+  const { isDemoMode } = useDemoMode();
   const [rows, setRows] = React.useState<any[]>([]);
   const q = '';
   const [page, setPage] = React.useState(1);
@@ -33,12 +35,17 @@ const Recipes: React.FC = () => {
         setLoading(false);
       }
     },
-    [],
+    [isDemoMode],
   );
 
   React.useEffect(() => {
     loadRecipes(q, page);
   }, [q, page, loadRecipes]);
+
+  React.useEffect(() => {
+    setPage(1);
+    setEditing(null);
+  }, [isDemoMode]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -233,8 +240,10 @@ const Recipes: React.FC = () => {
                         <button
                           className="fl-recipes-btn fl-recipes-btn-ghost"
                           onClick={() => startEdit(recipe)}
+                          disabled={isDemoMode}
+                          title={isDemoMode ? 'El modo demo es de sólo lectura' : undefined}
                         >
-                          {isEditing ? 'Cerrar' : 'Editar'}
+                          {isDemoMode ? 'Sólo lectura' : isEditing ? 'Cerrar' : 'Editar'}
                         </button>
                       </td>
                     </tr>

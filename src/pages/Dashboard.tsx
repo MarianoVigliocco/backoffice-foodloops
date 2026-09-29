@@ -20,6 +20,7 @@ import {
   YAxis,
 } from 'recharts';
 import '../styles/dashboard.css';
+import { useDemoMode } from '../demoMode';
 
 type DateSelection = { from: string; to: string };
 type RangePreset = 7 | 30 | 90 | 'custom';
@@ -202,6 +203,7 @@ const CohortStat: React.FC<{
 );
 
 const Dashboard: React.FC = () => {
+  const { isDemoMode } = useDemoMode();
   const [data, setData] = React.useState<MetricResponse | null>(null);
   const [err, setErr] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -228,7 +230,7 @@ const Dashboard: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isDemoMode]);
 
   React.useEffect(() => {
     loadMetrics(appliedRange, !data);

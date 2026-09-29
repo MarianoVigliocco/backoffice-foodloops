@@ -1,5 +1,7 @@
 // src/lib/api.ts
 import { EDGE_BASE, supabase } from './supabaseClient';
+import { isDemoModeEnabled } from '../demoMode';
+import { demoMetrics, demoRecipesList, demoUsersList } from './demoData';
 
 export type MetricPoint = {
     value: number | null;
@@ -150,6 +152,8 @@ export async function apiMetrics(params?: {
     to?: string;
     timezone?: string;
 }): Promise<MetricResponse> {
+    if (isDemoModeEnabled()) return demoMetrics(params);
+
     const query = new URLSearchParams();
     if (params?.from) query.set('from', params.from);
     if (params?.to) query.set('to', params.to);
@@ -181,6 +185,8 @@ export async function apiUsersList(params: {
     sortBy?: UserSortKey;
     sortDirection?: SortDirection;
 }) {
+    if (isDemoModeEnabled()) return demoUsersList(params);
+
     const p = new URLSearchParams();
     if (params.q) p.set('q', params.q);
     if (params.page) p.set('page', String(params.page));
@@ -202,6 +208,8 @@ export async function apiUsersList(params: {
 }
 
 export async function apiUserToggle(id_user: number, enabled: boolean) {
+    if (isDemoModeEnabled()) throw new Error('El modo demo es de sólo lectura');
+
     const headers = await authHeaders({ 'Content-Type': 'application/json' });
     const r = await fetch(`${EDGE_BASE}/admin-users`, {
         method: 'PATCH',
@@ -219,6 +227,8 @@ export async function apiUserToggle(id_user: number, enabled: boolean) {
 /* -------- RECIPES -------- */
 
 export async function apiRecipesList(params: { q?: string; page?: number; pageSize?: number }) {
+    if (isDemoModeEnabled()) return demoRecipesList(params);
+
     const p = new URLSearchParams();
     if (params.q) p.set('q', params.q);
     if (params.page) p.set('page', String(params.page));
@@ -238,6 +248,8 @@ export async function apiRecipesList(params: { q?: string; page?: number; pageSi
 }
 
 export async function apiRecipeUpdate(payload: any) {
+    if (isDemoModeEnabled()) throw new Error('El modo demo es de sólo lectura');
+
     const headers = await authHeaders({ 'Content-Type': 'application/json' });
     const r = await fetch(`${EDGE_BASE}/admin-recipes`, {
         method: 'PATCH',

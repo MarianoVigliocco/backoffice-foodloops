@@ -2,9 +2,11 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
+import { useDemoMode } from './demoMode';
 
 const App: React.FC = () => {
   const loc = useLocation();
+  const { isDemoMode } = useDemoMode();
   return (
     <div className="app">
       <Sidebar />
@@ -16,6 +18,12 @@ const App: React.FC = () => {
             : loc.pathname.includes('reports') ? 'Reportes'
             : ''
         } />
+        {isDemoMode && (
+          <div className="fl-demo-banner" role="status">
+            <strong>Modo demo activo</strong>
+            <span>Estás viendo datos sintéticos de los últimos 12 meses. Todas las acciones de escritura están bloqueadas.</span>
+          </div>
+        )}
         <div className="page">
           <Outlet />
         </div>

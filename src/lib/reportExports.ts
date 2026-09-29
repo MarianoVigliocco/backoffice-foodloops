@@ -15,6 +15,7 @@ type ExportContext = {
   metrics: MetricResponse;
   period: string;
   timezone: string;
+  isDemoMode?: boolean;
 };
 
 type DataRow = Array<string | number | boolean | null>;
@@ -41,6 +42,7 @@ function sheet(headers: string[], rows: DataRow[]): SheetData {
 function summaryRows(context: ExportContext): DataRow[] {
   const { metrics, period, timezone } = context;
   return [
+    ['Tipo de datos', context.isDemoMode ? 'DEMOSTRACIÓN' : 'REALES', context.isDemoMode ? 'Datos sintéticos; no usar para decisiones reales' : 'Datos productivos'],
     ['Período', period, 'Rango seleccionado por el administrador'],
     ['Zona horaria', timezone, 'Usada para agrupar los eventos'],
     ['Usuarios con valor semanal', metrics.weekly_value_users, 'Importaron o guardaron una receta en los últimos 7 días'],
@@ -265,7 +267,7 @@ export async function exportReportExcel(context: ExportContext) {
     : context.reportId === 'imports'
       ? importSheets(context)
       : datasetSheets(context);
-  const filename = `foodloops-${context.reportId}-${dayjs().format('YYYY-MM-DD')}.xlsx`;
+  const filename = `foodloops-${context.reportId}${context.isDemoMode ? '-demo' : ''}-${dayjs().format('YYYY-MM-DD')}.xlsx`;
   await writeXlsxFile(sheets, { fontFamily: 'Arial', fontSize: 10 }).toFile(filename);
 }
 
@@ -314,6 +316,12 @@ export async function exportReportPdf(context: ExportContext) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
   doc.text('FOODLOOPS · BACKOFFICE', 16, 20);
+  if (context.isDemoMode) {
+    doc.setFillColor(255, 241, 232);
+    doc.roundedRect(145, 14, 49, 9, 2, 2, 'F');
+    doc.setFontSize(8);
+    doc.text('DATOS DE DEMOSTRACIÓN', 169.5, 19.7, { align: 'center' });
+  }
   doc.setTextColor(...ink);
   doc.setFontSize(23);
   doc.text(definition.title, 16, 32);
@@ -419,5 +427,5 @@ export async function exportReportPdf(context: ExportContext) {
     doc.text(`Página ${page} de ${pages}`, 194, 290, { align: 'right' });
   }
 
-  doc.save(`foodloops-${context.reportId}-${dayjs().format('YYYY-MM-DD')}.pdf`);
+  doc.save(`foodloops-${context.reportId}${context.isDemoMode ? '-demo' : ''}-${dayjs().format('YYYY-MM-DD')}.pdf`);
 }
