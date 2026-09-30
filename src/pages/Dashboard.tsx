@@ -708,7 +708,7 @@ const Dashboard: React.FC = () => {
                 {data.top_source_authors.map((author, index) => (
                   <tr key={`${author.platform}-${author.username.toLowerCase()}`}>
                     <td className="fl-authors-rank">{index + 1}</td>
-                    <td className="fl-table-title-cell">@{author.username}</td>
+                    <td className="fl-table-title-cell">@{author.username.replace(/^@+/, '')}</td>
                     <td><span className={`fl-platform-badge fl-platform-${author.platform.toLowerCase()}`}>{author.platform}</span></td>
                     <td className="fl-table-cell-right">{author.recipes}</td>
                     <td className="fl-table-number-cell">{author.saves}</td>
