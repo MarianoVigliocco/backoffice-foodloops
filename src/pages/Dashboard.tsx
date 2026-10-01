@@ -29,21 +29,21 @@ type RecipeGranularity = 'daily' | 'weekly' | 'monthly';
 type RecipeActivityPoint = { day: string; created: number; saved: number };
 
 const DASHBOARD_TOOLTIPS = {
-  weeklyValueUsers: 'Cantidad de usuarios únicos que, durante los últimos 7 días cerrados por la fecha final elegida, importaron una receta desde Instagram o TikTok, o guardaron una receta.',
+  weeklyValueUsers: 'Cantidad de usuarios únicos que, durante los últimos 7 días cerrados por la fecha final elegida, transcribieron una receta desde Instagram o TikTok, o guardaron una receta.',
   newUsers: 'Cantidad de cuentas creadas dentro del período seleccionado. La variación MoM compara este valor con el mismo rango desplazado un mes.',
-  activeUsers: 'Usuarios únicos que tuvieron actividad dentro del período: importaron o guardaron recetas, conversaron con FoodLoops o usaron la planificación de comidas.',
-  activation: 'Porcentaje de usuarios nuevos que realizaron su primera acción de valor —importar una receta desde Instagram o TikTok, o guardar una receta— dentro de los 7 días posteriores a registrarse.',
+  activeUsers: 'Usuarios únicos que tuvieron actividad dentro del período: transcribieron o guardaron recetas, conversaron con FoodLoops o usaron la planificación de comidas.',
+  activation: 'Porcentaje de usuarios nuevos que realizaron su primera acción de valor —transcribir una receta desde Instagram o TikTok, o guardar una receta— dentro de los 7 días posteriores a registrarse.',
   retention: 'Porcentaje de cada cohorte de usuarios nuevos que volvió a tener actividad 1, 7 o 30 días después de registrarse.',
   userMix: 'Compara usuarios activos registrados durante el período con usuarios activos que ya existían antes de que comenzara.',
   recipesImported: 'Cantidad de recetas incorporadas en el período mediante links de Instagram o TikTok. FoodLoops no permite crear recetas manualmente.',
-  importPerformance: 'Tasa de intentos de importación resueltos correctamente por plataforma. Los intentos todavía pendientes no se cuentan como fallas.',
-  recipeActivity: 'Evolución de las recetas importadas desde Instagram o TikTok y de las acciones de guardado dentro del período seleccionado. La información puede agruparse por día, semana o mes.',
+  importPerformance: 'Tasa de intentos de transcripción resueltos correctamente por plataforma. Los intentos todavía pendientes no se cuentan como fallas.',
+  recipeActivity: 'Evolución de las recetas transcriptas desde Instagram o TikTok y de las acciones de guardado dentro del período seleccionado. La información puede agruparse por día, semana o mes.',
   topTags: 'Etiquetas más utilizadas por las recetas visibles en el período y cantidad de apariciones de cada una.',
   activeUsersTrend: 'Evolución semanal o mensual de usuarios únicos que realizaron una acción relevante.',
-  importTrend: 'Evolución semanal o mensual del porcentaje de importaciones resueltas correctamente en Instagram y TikTok.',
+  importTrend: 'Evolución semanal o mensual del porcentaje de transcripciones resueltas correctamente en Instagram y TikTok.',
   comparisons: 'Compara los indicadores actuales con el mismo rango desplazado un mes (MoM) y con las mismas fechas del año anterior (YoY).',
   preferences: 'Distribución actual de dietas y alergias declaradas por los usuarios, independientemente del rango temporal elegido.',
-  sourceAuthors: 'Autores originales de TikTok e Instagram con más recetas importadas y guardados asociados dentro del período.',
+  sourceAuthors: 'Autores originales de TikTok e Instagram con más recetas transcriptas y guardados asociados dentro del período.',
   seasonality: 'Agrupa la actividad por estaciones del hemisferio sur para detectar patrones anuales de uso y contenido.',
 } as const;
 
@@ -321,8 +321,8 @@ const Dashboard: React.FC = () => {
   }[] = [
     { label: 'Usuarios nuevos', key: 'new_users' },
     { label: 'Usuarios con valor semanal', key: 'weekly_value_users' },
-    { label: 'Recetas importadas', key: 'recipes_created' },
-    { label: 'Éxito de importación', key: 'import_success_rate', percent: true },
+    { label: 'Recetas transcriptas', key: 'recipes_created' },
+    { label: 'Éxito de transcripción', key: 'import_success_rate', percent: true },
   ];
 
   return (
@@ -405,7 +405,7 @@ const Dashboard: React.FC = () => {
         <Card className="fl-card fl-kpi fl-kpi-primary span-6" title="North Star · Usuarios con valor semanal" tooltip={DASHBOARD_TOOLTIPS.weeklyValueUsers}>
           <div className="fl-kpi-value">{data.weekly_value_users}</div>
           <div className="fl-kpi-label">
-            Usuarios únicos que importaron o guardaron una receta en 7 días.
+            Usuarios únicos que transcribieron o guardaron una receta en 7 días.
           </div>
           <DeltaBadge point={data.comparisons.mom.weekly_value_users} label="MoM" />
         </Card>
@@ -449,18 +449,18 @@ const Dashboard: React.FC = () => {
         <div className="fl-section-heading span-12">
           <div>
             <span className="fl-section-eyebrow">Salud del core</span>
-            <h2>Recetas e importaciones</h2>
+            <h2>Recetas y transcripciones</h2>
           </div>
           <p>El éxito se calcula sobre intentos resueltos; pendientes recientes no cuentan como fallas.</p>
         </div>
 
-        <Card className="fl-card fl-kpi span-3" title="Recetas importadas" tooltip={DASHBOARD_TOOLTIPS.recipesImported}>
+        <Card className="fl-card fl-kpi span-3" title="Recetas transcriptas" tooltip={DASHBOARD_TOOLTIPS.recipesImported}>
           <div className="fl-kpi-value">{data.recipes_created}</div>
-          <div className="fl-kpi-label">Importadas desde Instagram o TikTok durante el período.</div>
+          <div className="fl-kpi-label">Transcriptas desde Instagram o TikTok durante el período.</div>
           <DeltaBadge point={data.comparisons.mom.recipes_created} label="MoM" />
         </Card>
 
-        <Card className="fl-card fl-table-card span-9" title="Éxito de importación por plataforma" tooltip={DASHBOARD_TOOLTIPS.importPerformance}>
+        <Card className="fl-card fl-table-card span-9" title="Éxito de transcripción por plataforma" tooltip={DASHBOARD_TOOLTIPS.importPerformance}>
           {data.import_performance.tracking_since ? (
             <>
               <table className="fl-table fl-import-table">
@@ -496,50 +496,26 @@ const Dashboard: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="fl-empty fl-empty-compact">Todavía no hay intentos de importación instrumentados.</div>
+            <div className="fl-empty fl-empty-compact">Todavía no hay intentos de transcripción instrumentados.</div>
           )}
         </Card>
 
-        <Card className="fl-card span-8" title="Recetas importadas y guardadas" tooltip={DASHBOARD_TOOLTIPS.recipeActivity}>
-          <div className="fl-chart-toolbar">
-            <div className="fl-segmented-control" aria-label="Agrupación de recetas importadas y guardadas">
-              {([
-                ['daily', 'Día'],
-                ['weekly', 'Semana'],
-                ['monthly', 'Mes'],
-              ] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={recipeGranularity === value ? 'active' : ''}
-                  aria-pressed={recipeGranularity === value}
-                  onClick={() => setRecipeGranularity(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
+        <Card className="fl-card span-8" title="Éxito de transcripción" tooltip={DASHBOARD_TOOLTIPS.importTrend}>
           <div className="fl-chart-wrapper fl-recipe-chart-wrapper">
-            {hasRecipeActivity ? (
+            {hasImportTrend ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={recipeSeries}>
+                <LineChart data={importSeries}>
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={(value) => formatRecipePeriod(String(value), recipeGranularity)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip
-                    labelFormatter={(value) => formatRecipeTooltipPeriod(String(value), recipeGranularity)}
-                    contentStyle={tooltipContentStyle}
-                    labelStyle={tooltipLabelStyle}
-                    itemStyle={tooltipItemStyle}
-                  />
+                  <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Line name="Importadas" type="monotone" dataKey="created" stroke="var(--accent)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
-                  <Line name="Guardadas" type="monotone" dataKey="saved" stroke="var(--success)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
+                  <Line name="Instagram" type="monotone" connectNulls dataKey="instagram" stroke="#cc4e8b" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line name="TikTok" type="monotone" connectNulls dataKey="tiktok" stroke="var(--text-secondary)" strokeWidth={2} dot={{ r: 3 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="fl-empty">Sin recetas importadas ni guardadas en este período.</div>
+              <div className="fl-empty">Sin transcripciones en este período.</div>
             )}
           </div>
         </Card>
@@ -590,22 +566,46 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className="fl-card span-6" title="Éxito de importación" tooltip={DASHBOARD_TOOLTIPS.importTrend}>
+        <Card className="fl-card span-6" title="Recetas transcriptas y guardadas" tooltip={DASHBOARD_TOOLTIPS.recipeActivity}>
+          <div className="fl-chart-toolbar">
+            <div className="fl-segmented-control" aria-label="Agrupación de recetas transcriptas y guardadas">
+              {([
+                ['daily', 'Día'],
+                ['weekly', 'Semana'],
+                ['monthly', 'Mes'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={recipeGranularity === value ? 'active' : ''}
+                  aria-pressed={recipeGranularity === value}
+                  onClick={() => setRecipeGranularity(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="fl-chart-wrapper fl-chart-wrapper-small">
-            {hasImportTrend ? (
+            {hasRecipeActivity ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={importSeries}>
+                <LineChart data={recipeSeries}>
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
+                  <XAxis dataKey="day" tickFormatter={(value) => formatRecipePeriod(String(value), recipeGranularity)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <Tooltip
+                    labelFormatter={(value) => formatRecipeTooltipPeriod(String(value), recipeGranularity)}
+                    contentStyle={tooltipContentStyle}
+                    labelStyle={tooltipLabelStyle}
+                    itemStyle={tooltipItemStyle}
+                  />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
-                  <Line name="Instagram" type="monotone" connectNulls dataKey="instagram" stroke="#cc4e8b" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line name="TikTok" type="monotone" connectNulls dataKey="tiktok" stroke="var(--text-secondary)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line name="Transcriptas" type="monotone" dataKey="created" stroke="var(--accent)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
+                  <Line name="Guardadas" type="monotone" dataKey="saved" stroke="var(--success)" strokeWidth={2} dot={recipeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="fl-empty">Sin importaciones en este período.</div>
+              <div className="fl-empty">Sin recetas transcriptas ni guardadas en este período.</div>
             )}
           </div>
         </Card>
@@ -731,7 +731,7 @@ const Dashboard: React.FC = () => {
           {data.seasonality.seasons.length ? (
             <table className="fl-table fl-season-table">
               <thead>
-                <tr><th>Estación</th><th>Período</th><th className="fl-table-cell-right">Usuarios con valor</th><th className="fl-table-cell-right">Importadas</th><th className="fl-table-cell-right">Guardadas</th><th>Tag destacado</th><th>Estado</th></tr>
+                <tr><th>Estación</th><th>Período</th><th className="fl-table-cell-right">Usuarios con valor</th><th className="fl-table-cell-right">Transcriptas</th><th className="fl-table-cell-right">Guardadas</th><th>Tag destacado</th><th>Estado</th></tr>
               </thead>
               <tbody>
                 {data.seasonality.seasons.map((season) => (

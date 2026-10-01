@@ -319,7 +319,7 @@ const Reports: React.FC = () => {
 
                 {selectedId === 'imports' ? (
                   <div className="fl-report-preview-block">
-                    <span className="fl-report-preview-block-label">Importación por plataforma</span>
+                    <span className="fl-report-preview-block-label">Transcripción por plataforma</span>
                     <div className="fl-report-platform-list">
                       {metrics.import_performance.platforms.map((platform) => (
                         <div key={platform.platform}>
@@ -334,7 +334,7 @@ const Reports: React.FC = () => {
                   <div className="fl-report-preview-block">
                     <span className="fl-report-preview-block-label">Hojas del libro</span>
                     <div className="fl-report-sheet-tags">
-                      {['Resumen', 'Actividad', 'Usuarios', 'Importaciones', 'Contenido', 'Preferencias', 'Estacionalidad', 'Diccionario'].map((name) => <span key={name}>{name}</span>)}
+                      {['Resumen', 'Actividad', 'Usuarios', 'Transcripciones', 'Contenido', 'Preferencias', 'Estacionalidad', 'Diccionario'].map((name) => <span key={name}>{name}</span>)}
                     </div>
                   </div>
                 ) : (

@@ -27,7 +27,7 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     id: 'executive',
     eyebrow: 'Dirección',
     title: 'Resumen ejecutivo',
-    description: 'Una lectura breve de adquisición, valor, retención y salud del flujo de importación.',
+    description: 'Una lectura breve de adquisición, valor, retención y salud del flujo de transcripción.',
     decision: 'Detectar rápidamente qué mejoró, qué empeoró y dónde conviene actuar.',
     scope: 'Sintetiza los indicadores principales y genera conclusiones basadas únicamente en el período seleccionado.',
     formats: ['pdf'],
@@ -39,19 +39,19 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     title: 'Adopción y retención',
     description: 'Altas, usuarios activos, activación, recurrencia y evolución de cohortes.',
     decision: 'Entender si las personas llegan al valor inicial y vuelven a usar FoodLoops.',
-    scope: 'Las acciones de valor son importar una receta desde Instagram o TikTok, o guardar una receta.',
+    scope: 'Las acciones de valor son transcribir una receta desde Instagram o TikTok, o guardar una receta.',
     formats: ['pdf', 'xlsx'],
     contents: ['Usuarios nuevos y activos', 'Activación en 7 días', 'Retención D1, D7 y D30', 'Nuevos vs. recurrentes'],
   },
   {
     id: 'imports',
     eyebrow: 'Operación & Contenido',
-    title: 'Importaciones y contenido',
+    title: 'Transcripciones y contenido',
     description: 'Volumen, éxito por plataforma, tendencias, autores originales y tags.',
     decision: 'Encontrar caídas del flujo principal y oportunidades de contenido por plataforma.',
-    scope: 'Sólo considera recetas importadas mediante links de Instagram o TikTok; no existe creación manual.',
+    scope: 'Sólo considera recetas transcriptas mediante links de Instagram o TikTok; no existe creación manual.',
     formats: ['pdf', 'xlsx'],
-    contents: ['Recetas importadas', 'Éxito y fallas por plataforma', 'Evolución temporal', 'Autores y tags'],
+    contents: ['Recetas transcriptas', 'Éxito y fallas por plataforma', 'Evolución temporal', 'Autores y tags'],
   },
   {
     id: 'dataset',
@@ -61,7 +61,7 @@ export const REPORT_CATALOG: readonly ReportDefinition[] = [
     decision: 'Cruzar datos, crear modelos propios y profundizar análisis fuera del backoffice.',
     scope: 'Incluye información agregada y anonimizada. No exporta nombres ni correos de usuarios.',
     formats: ['xlsx'],
-    contents: ['Resumen', 'Actividad diaria', 'Tendencias', 'Importaciones', 'Preferencias', 'Diccionario'],
+    contents: ['Resumen', 'Actividad diaria', 'Tendencias', 'Transcripciones', 'Preferencias', 'Diccionario'],
   },
 ] as const;
 
@@ -106,7 +106,7 @@ export function previewMetricsFor(reportId: ReportId, metrics: MetricResponse): 
     const resolved = metrics.import_performance.platforms.reduce((sum, item) => sum + item.resolved_attempts, 0);
     const failures = metrics.import_performance.platforms.reduce((sum, item) => sum + item.failures, 0);
     return [
-      { label: 'Recetas importadas', value: formatReportValue(metrics.recipes_created), detail: metricChange(metrics.comparisons.mom.recipes_created) },
+      { label: 'Recetas transcriptas', value: formatReportValue(metrics.recipes_created), detail: metricChange(metrics.comparisons.mom.recipes_created) },
       { label: 'Éxito general', value: formatReportValue(overallImportSuccess(metrics), true), detail: `${resolved} intentos resueltos` },
       { label: 'Fallas', value: formatReportValue(failures), detail: 'Instagram y TikTok' },
       { label: 'Autores identificados', value: formatReportValue(metrics.top_source_authors.length), detail: 'Autores originales en el período' },
@@ -115,7 +115,7 @@ export function previewMetricsFor(reportId: ReportId, metrics: MetricResponse): 
 
   if (reportId === 'dataset') {
     return [
-      { label: 'Series diarias', value: formatReportValue(metrics.recipe_activity_per_day.length), detail: 'Importaciones y guardados' },
+      { label: 'Series diarias', value: formatReportValue(metrics.recipe_activity_per_day.length), detail: 'Transcripciones y guardados' },
       { label: 'Series de tendencia', value: formatReportValue(metrics.trends.active_users.weekly.length + metrics.trends.active_users.monthly.length), detail: 'Semanas y meses disponibles' },
       { label: 'Tablas temáticas', value: '8', detail: 'Hojas listas para analizar' },
       { label: 'Datos personales', value: '0', detail: 'Exportación anonimizada' },
@@ -126,7 +126,7 @@ export function previewMetricsFor(reportId: ReportId, metrics: MetricResponse): 
     { label: 'Usuarios con valor semanal', value: formatReportValue(metrics.weekly_value_users), detail: metricChange(metrics.comparisons.mom.weekly_value_users) },
     { label: 'Usuarios nuevos', value: formatReportValue(metrics.new_users), detail: metricChange(metrics.comparisons.mom.new_users) },
     { label: 'Retención D7', value: formatReportValue(metrics.retention.d7.value, true), detail: `${metrics.retention.d7.numerator} de ${metrics.retention.d7.denominator} elegibles` },
-    { label: 'Éxito de importación', value: formatReportValue(overallImportSuccess(metrics), true), detail: 'Intentos resueltos de ambas plataformas' },
+    { label: 'Éxito de transcripción', value: formatReportValue(overallImportSuccess(metrics), true), detail: 'Intentos resueltos de ambas plataformas' },
   ];
 }
 
@@ -150,10 +150,10 @@ export function executiveInsights(metrics: MetricResponse) {
 
   const importSuccess = overallImportSuccess(metrics);
   if (importSuccess == null) {
-    insights.push('No hubo intentos de importación resueltos suficientes para calcular la tasa de éxito.');
+    insights.push('No hubo intentos de transcripción resueltos suficientes para calcular la tasa de éxito.');
   } else {
     const assessment = importSuccess >= 90 ? 'saludable' : importSuccess >= 75 ? 'a monitorear' : 'requiere atención';
-    insights.push(`El éxito general de importación fue ${importSuccess}% y se encuentra ${assessment}.`);
+    insights.push(`El éxito general de transcripción fue ${importSuccess}% y se encuentra ${assessment}.`);
   }
 
   return insights;

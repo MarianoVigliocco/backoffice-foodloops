@@ -45,13 +45,13 @@ function summaryRows(context: ExportContext): DataRow[] {
     ['Tipo de datos', context.isDemoMode ? 'DEMOSTRACIÓN' : 'REALES', context.isDemoMode ? 'Datos sintéticos; no usar para decisiones reales' : 'Datos productivos'],
     ['Período', period, 'Rango seleccionado por el administrador'],
     ['Zona horaria', timezone, 'Usada para agrupar los eventos'],
-    ['Usuarios con valor semanal', metrics.weekly_value_users, 'Importaron o guardaron una receta en los últimos 7 días'],
+    ['Usuarios con valor semanal', metrics.weekly_value_users, 'Transcribieron o guardaron una receta en los últimos 7 días'],
     ['Usuarios nuevos', metrics.new_users, 'Cuentas creadas dentro del período'],
     ['Usuarios activos', metrics.active_users, 'Usuarios con cualquier actividad relevante'],
     ['Activación en 7 días', metrics.activation_7d.value, 'Porcentaje de usuarios elegibles con primera acción de valor'],
     ['Retención D7', metrics.retention.d7.value, 'Porcentaje de la cohorte elegible que volvió el día 7'],
-    ['Recetas importadas', metrics.recipes_created, 'Recetas incorporadas desde Instagram o TikTok'],
-    ['Éxito de importación', overallImportSuccess(metrics), 'Porcentaje sobre intentos resueltos'],
+    ['Recetas transcriptas', metrics.recipes_created, 'Recetas transcriptas desde Instagram o TikTok'],
+    ['Éxito de transcripción', overallImportSuccess(metrics), 'Porcentaje sobre intentos resueltos'],
   ];
 }
 
@@ -117,7 +117,7 @@ function importSheets(context: ExportContext) {
     {
       sheet: 'Plataformas',
       data: sheet(
-        ['Plataforma', 'Intentos', 'Resueltos', 'Exitosos', 'Fallas', 'Pendientes', 'Éxito %', 'Duración promedio (s)', 'Recetas importadas'],
+        ['Plataforma', 'Intentos', 'Resueltos', 'Exitosos', 'Fallas', 'Pendientes', 'Éxito %', 'Duración promedio (s)', 'Recetas transcriptas'],
         metrics.import_performance.platforms.map((row) => [
           row.platform,
           row.attempts,
@@ -135,13 +135,13 @@ function importSheets(context: ExportContext) {
     {
       sheet: 'Actividad diaria',
       data: sheet(
-        ['Fecha', 'Recetas importadas', 'Guardados'],
+        ['Fecha', 'Recetas transcriptas', 'Guardados'],
         metrics.recipe_activity_per_day.map((row) => [row.day, row.created, row.saved]),
       ),
       stickyRowsCount: 1,
     },
     {
-      sheet: 'Tendencia importación',
+      sheet: 'Tendencia transcripción',
       data: sheet(
         ['Granularidad', 'Período', 'Instagram %', 'Intentos Instagram', 'TikTok %', 'Intentos TikTok'],
         [
@@ -155,7 +155,7 @@ function importSheets(context: ExportContext) {
       sheet: 'Contenido',
       data: [
         [sectionCell('Autores originales')],
-        ['Autor', 'Plataforma', 'Recetas importadas', 'Guardados'].map(headerCell),
+        ['Autor', 'Plataforma', 'Recetas transcriptas', 'Guardados'].map(headerCell),
         ...metrics.top_source_authors.map((row) => [row.username, row.platform, row.recipes, row.saves]),
         [],
         [sectionCell('Tags más utilizados')],
@@ -173,12 +173,12 @@ function importSheets(context: ExportContext) {
 
 function dictionarySheet(scope: 'adoption' | 'imports' | 'dataset'): SheetData {
   const common: DataRow[] = [
-    ['Usuarios con valor semanal', 'Usuarios únicos que importaron o guardaron una receta durante los 7 días cerrados por la fecha final.'],
-    ['Usuarios activos', 'Usuarios únicos que importaron o guardaron recetas, conversaron con FoodLoops o usaron la planificación.'],
+    ['Usuarios con valor semanal', 'Usuarios únicos que transcribieron o guardaron una receta durante los 7 días cerrados por la fecha final.'],
+    ['Usuarios activos', 'Usuarios únicos que transcribieron o guardaron recetas, conversaron con FoodLoops o usaron la planificación.'],
     ['Activación en 7 días', 'Usuarios nuevos con una primera acción de valor dentro de sus primeros 7 días, sobre usuarios elegibles.'],
     ['Retención D1 / D7 / D30', 'Usuarios de una cohorte que volvieron a tener actividad en el día indicado.'],
-    ['Recetas importadas', 'Recetas incorporadas mediante links de Instagram o TikTok. No incluye creación manual.'],
-    ['Éxito de importación', 'Intentos exitosos dividido intentos resueltos. Los pendientes recientes no cuentan como fallas.'],
+    ['Recetas transcriptas', 'Recetas transcriptas mediante links de Instagram o TikTok. No incluye creación manual.'],
+    ['Éxito de transcripción', 'Intentos exitosos dividido intentos resueltos. Los pendientes recientes no cuentan como fallas.'],
     ['MoM', 'Comparación con el mismo rango desplazado un mes.'],
     ['YoY', 'Comparación con las mismas fechas del año anterior.'],
   ];
@@ -199,7 +199,7 @@ function datasetSheets(context: ExportContext) {
     {
       sheet: 'Actividad',
       data: sheet(
-        ['Fecha', 'Recetas importadas', 'Guardados'],
+        ['Fecha', 'Recetas transcriptas', 'Guardados'],
         metrics.recipe_activity_per_day.map((row) => [row.day, row.created, row.saved]),
       ),
       stickyRowsCount: 1,
@@ -216,7 +216,7 @@ function datasetSheets(context: ExportContext) {
       stickyRowsCount: 1,
     },
     {
-      sheet: 'Importaciones',
+      sheet: 'Transcripciones',
       data: importSheets(context)[1].data,
       stickyRowsCount: 1,
     },
@@ -239,7 +239,7 @@ function datasetSheets(context: ExportContext) {
     {
       sheet: 'Estacionalidad',
       data: sheet(
-        ['Estación', 'Período', 'Usuarios con valor', 'Recetas importadas', 'Guardados', 'Tag destacado', 'Período completo'],
+        ['Estación', 'Período', 'Usuarios con valor', 'Recetas transcriptas', 'Guardados', 'Tag destacado', 'Período completo'],
         metrics.seasonality.seasons.map((row) => [
           row.season,
           row.period,
@@ -276,8 +276,8 @@ function comparisonRows(metrics: MetricResponse) {
   const definitions = [
     ['Usuarios nuevos', 'new_users', false],
     ['Usuarios con valor semanal', 'weekly_value_users', false],
-    ['Recetas importadas', 'recipes_created', false],
-    ['Éxito de importación', 'import_success_rate', true],
+    ['Recetas transcriptas', 'recipes_created', false],
+    ['Éxito de transcripción', 'import_success_rate', true],
   ] as const;
   definitions.forEach(([label, key, percent]) => {
     const mom = metrics.comparisons.mom[key];

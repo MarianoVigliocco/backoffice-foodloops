@@ -1,10 +1,44 @@
 import React from 'react';
 import Card from '../components/Card';
-import { apiRecipesList, apiRecipeUpdate } from '../lib/api';
+import { apiRecipesList, apiRecipeDelete, apiRecipeUpdate } from '../lib/api';
 import '../styles/recipes.css';
 import { useDemoMode } from '../demoMode';
 
 const pageSize = 20;
+const MAX_TITLE_LENGTH = 160;
+const MAX_CALORIES_PER_SERVING = 10_000;
+const DIFFICULTIES = ['Fácil', 'Intermedio', 'Avanzado'] as const;
+
+type RecipeEditorErrors = Partial<Record<'title' | 'difficulty' | 'calories', string>>;
+
+function validateRecipeEditor(recipe: any): RecipeEditorErrors {
+  const errors: RecipeEditorErrors = {};
+  const title = String(recipe?.title ?? '').trim();
+  const difficulty = String(recipe?.difficulty ?? '').trim();
+  const rawCalories = String(recipe?.calories_per_serving_kcal ?? '').trim();
+
+  if (!title) errors.title = 'El título es obligatorio.';
+  else if (title.length > MAX_TITLE_LENGTH) {
+    errors.title = `El título no puede superar ${MAX_TITLE_LENGTH} caracteres.`;
+  }
+
+  if (!DIFFICULTIES.includes(difficulty as (typeof DIFFICULTIES)[number])) {
+    errors.difficulty = 'Seleccioná una dificultad válida.';
+  }
+
+  if (rawCalories) {
+    if (!/^\d+$/.test(rawCalories)) {
+      errors.calories = 'Ingresá un número entero sin signo.';
+    } else {
+      const calories = Number(rawCalories);
+      if (!Number.isSafeInteger(calories) || calories > MAX_CALORIES_PER_SERVING) {
+        errors.calories = `El valor debe estar entre 0 y ${MAX_CALORIES_PER_SERVING.toLocaleString('es-AR')}.`;
+      }
+    }
+  }
+
+  return errors;
+}
 
 const Recipes: React.FC = () => {
   const { isDemoMode } = useDemoMode();
@@ -15,6 +49,8 @@ const Recipes: React.FC = () => {
   const [editing, setEditing] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const [recipeToDelete, setRecipeToDelete] = React.useState<any | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const loadRecipes = React.useCallback(
@@ -58,12 +94,21 @@ const Recipes: React.FC = () => {
     setEditing({
       ...recipe,
       calories_per_serving_kcal:
-        recipe.calories_per_serving_kcal ?? recipe.calories ?? recipe.kcal ?? null,
+        recipe.calories_per_serving_kcal ?? recipe.calories ?? recipe.kcal ?? '',
     });
   };
 
+  const editingErrors = editing ? validateRecipeEditor(editing) : {};
+  const canSave = Boolean(editing) && Object.keys(editingErrors).length === 0 && !saving;
+
   const save = async () => {
     if (!editing) return;
+
+    const validationErrors = validateRecipeEditor(editing);
+    if (Object.keys(validationErrors).length > 0) {
+      setError('Revisá los campos marcados antes de guardar.');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -71,10 +116,10 @@ const Recipes: React.FC = () => {
 
       await apiRecipeUpdate({
         id_recipe: editing.id_recipe,
-        title: editing.title?.trim() || null,
-        difficulty: editing.difficulty || null,
+        title: editing.title.trim(),
+        difficulty: editing.difficulty,
         macros: {
-          calories: editing.calories_per_serving_kcal
+          calories: String(editing.calories_per_serving_kcal).trim()
             ? Number(editing.calories_per_serving_kcal)
             : null,
         },
@@ -87,6 +132,29 @@ const Recipes: React.FC = () => {
       setError('No se pudo guardar la receta. Revisá los datos e intentá nuevamente.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!recipeToDelete || deleting) return;
+
+    try {
+      setDeleting(true);
+      setError(null);
+      await apiRecipeDelete(Number(recipeToDelete.id_recipe));
+      if (editing?.id_recipe === recipeToDelete.id_recipe) setEditing(null);
+      setRecipeToDelete(null);
+
+      if (rows.length === 1 && page > 1) {
+        setPage((current) => Math.max(1, current - 1));
+      } else {
+        await loadRecipes(q, page);
+      }
+    } catch (deleteError: any) {
+      console.error('Recipe delete error', deleteError);
+      setError(deleteError?.message || 'No se pudo eliminar la receta. Intentá nuevamente.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -119,20 +187,29 @@ const Recipes: React.FC = () => {
             value={editing.title ?? ''}
             onChange={(event) => setEditing({ ...editing, title: event.target.value })}
             placeholder="Título de la receta"
+            maxLength={MAX_TITLE_LENGTH}
+            aria-invalid={Boolean(editingErrors.title)}
           />
+          {editingErrors.title && <span className="fl-recipes-field-error">{editingErrors.title}</span>}
         </div>
 
         <div className="fl-recipes-edit-field">
           <label className="fl-recipes-label" htmlFor={`recipe-difficulty-${editing.id_recipe}`}>
             Dificultad
           </label>
-          <input
+          <select
             id={`recipe-difficulty-${editing.id_recipe}`}
             className="fl-recipes-input"
             value={editing.difficulty ?? ''}
             onChange={(event) => setEditing({ ...editing, difficulty: event.target.value })}
-            placeholder="Ej: Fácil, Media, Difícil"
-          />
+            aria-invalid={Boolean(editingErrors.difficulty)}
+          >
+            <option value="" disabled>Seleccionar</option>
+            {DIFFICULTIES.map((difficulty) => (
+              <option key={difficulty} value={difficulty}>{difficulty}</option>
+            ))}
+          </select>
+          {editingErrors.difficulty && <span className="fl-recipes-field-error">{editingErrors.difficulty}</span>}
         </div>
 
         <div className="fl-recipes-edit-field">
@@ -142,14 +219,20 @@ const Recipes: React.FC = () => {
           <input
             id={`recipe-kcal-${editing.id_recipe}`}
             className="fl-recipes-input"
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             value={editing.calories_per_serving_kcal ?? ''}
-            onChange={(event) => setEditing({
-              ...editing,
-              calories_per_serving_kcal: event.target.value ? Number(event.target.value) : null,
-            })}
+            onChange={(event) => {
+              const nextValue = event.target.value.replace(/\D/g, '').slice(0, 6);
+              setEditing({ ...editing, calories_per_serving_kcal: nextValue });
+            }}
             placeholder="Ej: 420"
+            maxLength={6}
+            aria-invalid={Boolean(editingErrors.calories)}
           />
+          <span className="fl-recipes-field-hint">0–{MAX_CALORIES_PER_SERVING.toLocaleString('es-AR')} kcal</span>
+          {editingErrors.calories && <span className="fl-recipes-field-error">{editingErrors.calories}</span>}
         </div>
       </div>
 
@@ -157,7 +240,7 @@ const Recipes: React.FC = () => {
         <button
           className="fl-recipes-btn fl-recipes-btn-primary"
           onClick={save}
-          disabled={saving}
+          disabled={!canSave}
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
@@ -178,7 +261,7 @@ const Recipes: React.FC = () => {
         <div>
           <h1 className="fl-recipes-title">Recetas</h1>
           <p className="fl-recipes-subtitle">
-            Explorá, revisá y ajustá las recetas importadas desde links de Instagram o TikTok.
+            Explorá, revisá y ajustá las recetas transcriptas desde links de Instagram o TikTok.
           </p>
         </div>
         <div className="fl-recipes-meta">
@@ -199,7 +282,7 @@ const Recipes: React.FC = () => {
                 <th>Cal/porción</th>
                 <th>Dificultad</th>
                 <th>Origen</th>
-                <th>Importada</th>
+                <th>Transcripta</th>
                 <th className="fl-recipes-th-actions">Acciones</th>
               </tr>
             </thead>
@@ -237,6 +320,7 @@ const Recipes: React.FC = () => {
                         {recipe.created_at ? String(recipe.created_at).slice(0, 10) : '-'}
                       </td>
                       <td className="fl-recipes-col-actions">
+                        <div className="fl-recipes-row-actions">
                         <button
                           className="fl-recipes-btn fl-recipes-btn-ghost"
                           onClick={() => startEdit(recipe)}
@@ -245,6 +329,17 @@ const Recipes: React.FC = () => {
                         >
                           {isDemoMode ? 'Sólo lectura' : isEditing ? 'Cerrar' : 'Editar'}
                         </button>
+                        {!isDemoMode && (
+                          <button
+                            className="fl-recipes-btn fl-recipes-btn-danger-ghost"
+                            onClick={() => setRecipeToDelete(recipe)}
+                            disabled={deleting}
+                            aria-label={`Eliminar ${recipe.title || `receta ${recipe.id_recipe}`}`}
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                        </div>
                       </td>
                     </tr>
                     {isEditing && (
@@ -279,6 +374,42 @@ const Recipes: React.FC = () => {
           </div>
         </div>
       </Card>
+
+      {recipeToDelete && (
+        <div className="fl-recipes-dialog-backdrop" role="presentation">
+          <div
+            className="fl-recipes-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-recipe-title"
+            aria-describedby="delete-recipe-description"
+          >
+            <span className="fl-recipes-dialog-kicker">Acción irreversible</span>
+            <h2 id="delete-recipe-title">Eliminar receta</h2>
+            <p id="delete-recipe-description">
+              Vas a eliminar <strong>{recipeToDelete.title || `la receta #${recipeToDelete.id_recipe}`}</strong> y
+              sus guardados, apariciones en menús y conversaciones asociadas.
+            </p>
+            <div className="fl-recipes-dialog-actions">
+              <button
+                className="fl-recipes-btn fl-recipes-btn-cancel"
+                onClick={() => setRecipeToDelete(null)}
+                disabled={deleting}
+                autoFocus
+              >
+                Cancelar
+              </button>
+              <button
+                className="fl-recipes-btn fl-recipes-btn-danger"
+                onClick={confirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar definitivamente'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

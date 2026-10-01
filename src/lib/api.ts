@@ -257,9 +257,29 @@ export async function apiRecipeUpdate(payload: any) {
         body: JSON.stringify(payload),
     });
     if (!r.ok) {
-        const text = await r.text().catch(() => '');
-        console.error('admin-recipes update failed', r.status, text);
-        throw new Error('recipe update failed');
+        const response = await r.json().catch(() => null);
+        console.error('admin-recipes update failed', r.status, response);
+        throw new Error(response?.error || 'No se pudo actualizar la receta');
+    }
+    return r.json();
+}
+
+export async function apiRecipeDelete(idRecipe: number) {
+    if (isDemoModeEnabled()) throw new Error('El modo demo es de sólo lectura');
+    if (!Number.isSafeInteger(idRecipe) || idRecipe <= 0) {
+        throw new Error('El identificador de la receta no es válido');
+    }
+
+    const headers = await authHeaders();
+    const params = new URLSearchParams({ id_recipe: String(idRecipe) });
+    const r = await fetch(`${EDGE_BASE}/admin-recipes?${params.toString()}`, {
+        method: 'DELETE',
+        headers,
+    });
+    if (!r.ok) {
+        const response = await r.json().catch(() => null);
+        console.error('admin-recipes delete failed', r.status, response);
+        throw new Error(response?.error || 'No se pudo eliminar la receta');
     }
     return r.json();
 }
