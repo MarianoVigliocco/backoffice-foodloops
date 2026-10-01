@@ -72,10 +72,15 @@ export function demoMetrics(params?: { from?: string; to?: string; timezone?: st
   const previousNewUsers = Math.max(1, Math.round(newUsers / 1.09));
   const previousWeeklyValue = Math.max(1, Math.round(weeklyValueUsers / 1.12));
 
+  const dailyActive: { period: string; users: number }[] = [];
   const weeklyBuckets = new Map<string, { users: number; imports: number }>();
   const monthlyBuckets = new Map<string, { users: number; imports: number }>();
   daily.forEach((item) => {
     const date = dayjs(item.day);
+    dailyActive.push({
+      period: item.day,
+      users: Math.round(item.created * 1.55 + item.saved * 0.45),
+    });
     const weekKey = startOfMonday(date).format('YYYY-MM-DD');
     const monthKey = date.format('YYYY-MM');
     const week = weeklyBuckets.get(weekKey) ?? { users: 0, imports: 0 };
@@ -195,7 +200,7 @@ export function demoMetrics(params?: { from?: string; to?: string; timezone?: st
     },
     comparisons: { mom, yoy },
     trends: {
-      active_users: { weekly: weeklyActive, monthly: monthlyActive },
+      active_users: { daily: dailyActive, weekly: weeklyActive, monthly: monthlyActive },
       import_success: { weekly: weeklyImports, monthly: monthlyImports },
     },
     seasonality: {

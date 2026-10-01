@@ -86,6 +86,7 @@ export type MetricResponse = {
     };
     trends: {
         active_users: {
+            daily: { period: string; users: number }[];
             weekly: { period: string; users: number }[];
             monthly: { period: string; users: number }[];
         };

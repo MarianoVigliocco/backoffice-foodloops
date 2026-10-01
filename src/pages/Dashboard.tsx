@@ -24,8 +24,8 @@ import { useDemoMode } from '../demoMode';
 
 type DateSelection = { from: string; to: string };
 type RangePreset = 7 | 30 | 90 | 'custom';
-type TrendGranularity = 'weekly' | 'monthly';
 type RecipeGranularity = 'daily' | 'weekly' | 'monthly';
+type ImportTrendGranularity = 'weekly' | 'monthly';
 type RecipeActivityPoint = { day: string; created: number; saved: number };
 
 const DASHBOARD_TOOLTIPS = {
@@ -39,7 +39,7 @@ const DASHBOARD_TOOLTIPS = {
   importPerformance: 'Tasa de intentos de transcripción resueltos correctamente por plataforma. Los intentos todavía pendientes no se cuentan como fallas.',
   recipeActivity: 'Evolución de las recetas transcriptas desde Instagram o TikTok y de las acciones de guardado dentro del período seleccionado. La información puede agruparse por día, semana o mes.',
   topTags: 'Etiquetas más utilizadas por las recetas visibles en el período y cantidad de apariciones de cada una.',
-  activeUsersTrend: 'Evolución semanal o mensual de usuarios únicos que realizaron una acción relevante.',
+  activeUsersTrend: 'Evolución diaria, semanal o mensual de usuarios únicos que realizaron una acción relevante.',
   importTrend: 'Evolución semanal o mensual del porcentaje de transcripciones resueltas correctamente en Instagram y TikTok.',
   comparisons: 'Compara los indicadores actuales con el mismo rango desplazado un mes (MoM) y con las mismas fechas del año anterior (YoY).',
   preferences: 'Distribución actual de dietas y alergias declaradas por los usuarios, independientemente del rango temporal elegido.',
@@ -211,7 +211,8 @@ const Dashboard: React.FC = () => {
   const [preset, setPreset] = React.useState<RangePreset>(30);
   const [draftRange, setDraftRange] = React.useState<DateSelection>(() => rangeForDays(30));
   const [appliedRange, setAppliedRange] = React.useState<DateSelection>(() => rangeForDays(30));
-  const [trendGranularity, setTrendGranularity] = React.useState<TrendGranularity>('weekly');
+  const [activeGranularity, setActiveGranularity] = React.useState<RecipeGranularity>('daily');
+  const [importGranularity, setImportGranularity] = React.useState<ImportTrendGranularity>('weekly');
   const [recipeGranularity, setRecipeGranularity] = React.useState<RecipeGranularity>('daily');
 
   const loadMetrics = React.useCallback(async (selection: DateSelection, initial = false) => {
@@ -277,8 +278,8 @@ const Dashboard: React.FC = () => {
   const periodDays = dayjs(appliedRange.to).diff(dayjs(appliedRange.from), 'day') + 1;
   const periodLabel = `${dayjs(appliedRange.from).format('DD/MM/YYYY')} – ${dayjs(appliedRange.to).format('DD/MM/YYYY')}`;
   const recipeSeries = aggregateRecipeActivity(data.recipe_activity_per_day, recipeGranularity);
-  const activeSeries = data.trends.active_users[trendGranularity];
-  const importSeries = data.trends.import_success[trendGranularity];
+  const activeSeries = data.trends.active_users[activeGranularity];
+  const importSeries = data.trends.import_success[importGranularity];
   const hasRecipeActivity = recipeSeries.some((point) => point.created > 0 || point.saved > 0);
   const hasActiveTrend = activeSeries.some((point) => point.users > 0);
   const hasImportTrend = importSeries.some((point) =>
@@ -501,12 +502,30 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card className="fl-card span-8" title="Éxito de transcripción" tooltip={DASHBOARD_TOOLTIPS.importTrend}>
+          <div className="fl-chart-toolbar">
+            <div className="fl-segmented-control" aria-label="Agrupación del éxito de transcripción">
+              {([
+                ['weekly', 'Semana'],
+                ['monthly', 'Mes'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={importGranularity === value ? 'active' : ''}
+                  aria-pressed={importGranularity === value}
+                  onClick={() => setImportGranularity(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="fl-chart-wrapper fl-recipe-chart-wrapper">
             {hasImportTrend ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={importSeries}>
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                  <XAxis dataKey="period" tickFormatter={(value) => formatRecipePeriod(String(value), activeGranularity)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
@@ -537,18 +556,33 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <div className="fl-section-heading span-12 fl-section-heading-with-control">
+        <div className="fl-section-heading span-12">
           <div>
             <span className="fl-section-eyebrow">Tendencias ampliadas</span>
             <h2>Evolución sostenida</h2>
           </div>
-          <div className="fl-segmented-control" aria-label="Granularidad de las tendencias">
-            <button type="button" className={trendGranularity === 'weekly' ? 'active' : ''} onClick={() => setTrendGranularity('weekly')}>Semanal</button>
-            <button type="button" className={trendGranularity === 'monthly' ? 'active' : ''} onClick={() => setTrendGranularity('monthly')}>Mensual</button>
-          </div>
         </div>
 
         <Card className="fl-card span-6" title="Usuarios activos" tooltip={DASHBOARD_TOOLTIPS.activeUsersTrend}>
+          <div className="fl-chart-toolbar">
+            <div className="fl-segmented-control" aria-label="Agrupación de usuarios activos">
+              {([
+                ['daily', 'Día'],
+                ['weekly', 'Semana'],
+                ['monthly', 'Mes'],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={activeGranularity === value ? 'active' : ''}
+                  aria-pressed={activeGranularity === value}
+                  onClick={() => setActiveGranularity(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="fl-chart-wrapper fl-chart-wrapper-small">
             {hasActiveTrend ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -556,8 +590,8 @@ const Dashboard: React.FC = () => {
                   <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="period" tickFormatter={formatTrendPeriod} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
                   <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-                  <Tooltip labelFormatter={(value) => formatTrendPeriod(String(value))} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
-                  <Line name="Usuarios activos" type="monotone" dataKey="users" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
+                  <Tooltip labelFormatter={(value) => formatRecipeTooltipPeriod(String(value), activeGranularity)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} />
+                  <Line name="Usuarios activos" type="monotone" dataKey="users" stroke="var(--accent)" strokeWidth={2} dot={activeGranularity === 'daily' ? false : { r: 3 }} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
