@@ -15,6 +15,7 @@ const App: React.FC = () => {
           loc.pathname === '/' ? 'Dashboard'
             : loc.pathname.includes('users') ? 'Gestión de Usuarios'
             : loc.pathname.includes('recipes') ? 'Gestión de Recetas'
+            : loc.pathname.includes('business') ? 'Modelo de Negocio'
             : loc.pathname.includes('reports') ? 'Reportes'
             : ''
         } />

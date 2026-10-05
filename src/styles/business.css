@@ -1,0 +1,344 @@
+.fl-business-root {
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 30px 32px 48px;
+}
+
+.fl-business-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.fl-business-kicker {
+  margin-bottom: 5px;
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.fl-business-header h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.fl-business-header p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.fl-business-demo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 8px 11px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.fl-business-demo-badge > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.fl-business-notice {
+  margin-bottom: 18px;
+  padding: 10px 13px;
+  color: var(--text-muted);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.fl-business-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.fl-business-card,
+.fl-business-alliances,
+.fl-business-creators {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  box-shadow: var(--shadow-sm);
+}
+
+.fl-business-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+}
+
+.fl-business-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 3px;
+  background: var(--business-color);
+}
+
+.fl-business-card--users { --business-color: #3975c6; --business-soft: rgba(57, 117, 198, .11); }
+.fl-business-card--premium { --business-color: #9a5ac4; --business-soft: rgba(154, 90, 196, .11); }
+.fl-business-card--ads { --business-color: var(--accent); --business-soft: var(--accent-soft); }
+
+.fl-business-card-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 17px;
+}
+
+.fl-business-card-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  color: var(--business-color);
+  background: var(--business-soft);
+  border-radius: 10px;
+}
+
+.fl-business-card-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fl-business-card-header h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.fl-business-card-header p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.fl-business-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fl-business-metric {
+  min-height: 78px;
+  padding: 11px 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.fl-business-metric > span,
+.fl-business-metric > small {
+  display: block;
+  color: var(--text-muted);
+  font-size: 8px;
+}
+
+.fl-business-metric > span { font-weight: 650; }
+.fl-business-metric > strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+}
+.fl-business-metric > small { margin-top: 3px; }
+
+.fl-business-alliances,
+.fl-business-creators {
+  margin-top: 14px;
+  overflow: hidden;
+}
+
+.fl-business-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 19px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.fl-business-section-heading > div:first-child > span {
+  color: var(--accent);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.fl-business-section-heading h2 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.fl-business-alliance-total {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--success);
+}
+.fl-business-alliance-total strong { font-size: 18px; }
+.fl-business-alliance-total span { font-size: 9px; font-weight: 650; }
+
+.fl-business-table-wrap { overflow-x: auto; }
+.fl-business-table { width: 100%; border-collapse: collapse; }
+.fl-business-table th,
+.fl-business-table td {
+  padding: 12px 19px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.fl-business-table th {
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+.fl-business-table td { color: var(--text-secondary); font-size: 10px; }
+.fl-business-table td strong { color: var(--text); font-weight: 700; }
+.fl-business-table tbody tr:last-child td { border-bottom: 0; }
+.fl-business-income { color: var(--text) !important; font-weight: 700; }
+
+.fl-business-status {
+  display: inline-flex;
+  padding: 4px 8px;
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 750;
+}
+.fl-business-status.is-active { color: var(--success); background: var(--success-soft); }
+
+.fl-business-creators-heading { align-items: flex-end; }
+.fl-business-creators-heading p {
+  max-width: 660px;
+  margin: 5px 0 0;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.fl-business-creator-summary {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.fl-business-creator-summary > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.fl-business-creator-summary strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.2;
+}
+.fl-business-creator-summary span {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.fl-business-number { color: var(--text) !important; font-weight: 700; }
+.fl-business-platform,
+.fl-business-partner {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-weight: 700;
+}
+.fl-business-platform--instagram { color: #a43b75; background: rgba(164, 59, 117, .1); }
+.fl-business-platform--tiktok { color: var(--text-secondary); background: var(--surface-hover); }
+.fl-business-partner { color: var(--text-muted); background: var(--surface-hover); }
+.fl-business-partner.is-partner { color: var(--accent); background: var(--accent-soft); }
+
+.fl-business-recurrence {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 108px;
+}
+.fl-business-recurrence > span {
+  width: 64px;
+  height: 5px;
+  overflow: hidden;
+  background: var(--surface-hover);
+  border-radius: 999px;
+}
+.fl-business-recurrence i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
+.fl-business-recurrence strong { min-width: 28px; color: var(--text-secondary); font-size: 9px; }
+
+.fl-business-table-note {
+  padding: 10px 19px;
+  color: var(--text-muted);
+  background: var(--surface-subtle);
+  border-top: 1px solid var(--border);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .fl-business-grid { grid-template-columns: 1fr 1fr; }
+  .fl-business-card--ads { grid-column: 1 / -1; }
+}
+
+@media (max-width: 720px) {
+  .fl-business-root { padding: 22px 16px 38px; }
+  .fl-business-header { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .fl-business-grid { grid-template-columns: 1fr; }
+  .fl-business-card--ads { grid-column: auto; }
+  .fl-business-creators-heading { align-items: flex-start; }
+  .fl-business-creator-summary { width: 100%; justify-content: flex-start; }
+  .fl-business-creator-summary > div { align-items: flex-start; }
+}
+
+@media (max-width: 420px) {
+  .fl-business-metrics { grid-template-columns: 1fr; }
+}

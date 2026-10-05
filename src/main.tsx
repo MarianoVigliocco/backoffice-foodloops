@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
 import Recipes from './pages/Recipes';
 import Reports from './pages/Reports';
+import Business from './pages/Business';
 import './styles.css';
 import { supabase } from './lib/supabaseClient';
 import { ThemeProvider } from './theme';
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "users", element: <Users /> },
       { path: "recipes", element: <Recipes /> },
+      { path: "business", element: <Business /> },
       { path: "reports", element: <Reports /> },
     ]
   }

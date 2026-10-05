@@ -270,7 +270,7 @@ a { color: inherit; text-decoration: none; }
   .app { display: block; }
   .sidebar { position: fixed; z-index: 60; top: auto; bottom: 0; width: 100%; height: 68px; padding: 8px 12px; border-right: 0; border-top: 1px solid var(--sidebar-border); }
   .brand, .sidebar-section-label, .sidebar-footer { display: none; }
-  .nav { grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .nav { grid-template-columns: repeat(5, 1fr); gap: 4px; }
   .nav a { min-height: 50px; }
   .nav a.active::before { left: 50%; top: -9px; width: 24px; height: 3px; transform: translateX(-50%); border-radius: 0 0 3px 3px; }
   .content { min-height: calc(100vh - 68px); padding-bottom: 68px; }
