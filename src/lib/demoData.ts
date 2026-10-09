@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import type { CohortMetric, MetricPoint, MetricResponse, SortDirection, UserSortKey } from './api';
+import type { BusinessResponse, CohortMetric, MetricPoint, MetricResponse, SortDirection, UserSortKey } from './api';
 import type { UserRow } from '../types';
 
 const DEMO_NOW = () => dayjs().startOf('day');
@@ -317,4 +317,65 @@ export function demoRecipesList(params: { q?: string; page?: number; pageSize?: 
   const page = Math.max(1, params.page ?? 1);
   const pageSize = Math.max(1, params.pageSize ?? 20);
   return { data: filtered.slice((page - 1) * pageSize, page * pageSize), total: filtered.length };
+}
+
+export function demoBusiness(): BusinessResponse {
+  const now = DEMO_NOW();
+  return {
+    ok: true,
+    agreements: [
+      {
+        id_commercial_agreement: 9001,
+        partner_name: 'Mercado Verde',
+        partner_type: 'supermarket',
+        source_username: null,
+        source_platform: null,
+        starts_on: now.subtract(2, 'month').format('YYYY-MM-DD'),
+        ends_on: now.add(4, 'month').format('YYYY-MM-DD'),
+        status: 'active',
+        agreed_amount: 420000,
+        target_reached_users: 1500,
+        target_saves: 2200,
+        currency: 'ARS',
+        notes: 'Datos de demostración.',
+        created_at: now.subtract(2, 'month').toISOString(),
+        updated_at: now.subtract(4, 'day').toISOString(),
+      },
+      {
+        id_commercial_agreement: 9002,
+        partner_name: 'Cocina con Mica',
+        partner_type: 'creator',
+        source_username: 'cocinaconmica',
+        source_platform: 'Instagram',
+        starts_on: now.subtract(1, 'month').format('YYYY-MM-DD'),
+        ends_on: now.add(2, 'month').format('YYYY-MM-DD'),
+        status: 'active',
+        agreed_amount: 180000,
+        target_reached_users: 600,
+        target_saves: 450,
+        currency: 'ARS',
+        notes: null,
+        created_at: now.subtract(1, 'month').toISOString(),
+        updated_at: now.subtract(1, 'month').toISOString(),
+      },
+    ],
+    creators: [
+      { username: 'cocinaconmica', platform: 'Instagram', reached_users: 486, attributed_recipes: 24, saves: 318, recurrent_users: 180, recurrence_rate: 37, has_active_agreement: true },
+      { username: 'food.en.minutos', platform: 'TikTok', reached_users: 392, attributed_recipes: 19, saves: 246, recurrent_users: 122, recurrence_rate: 31.1, has_active_agreement: false },
+      { username: 'sabores.casa', platform: 'Instagram', reached_users: 354, attributed_recipes: 16, saves: 221, recurrent_users: 120, recurrence_rate: 33.9, has_active_agreement: false },
+    ],
+    summary: {
+      agreements: 2,
+      active_agreements: 2,
+      creators: 3,
+      attributed_recipes: 59,
+      saves: 785,
+      reached_users: 1076,
+    },
+    data_quality: {
+      audience_basis: 'saved_recipes',
+      view_events_available: false,
+      unattributed_recipes: 7,
+    },
+  };
 }

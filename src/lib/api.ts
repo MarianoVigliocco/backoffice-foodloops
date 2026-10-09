@@ -1,7 +1,7 @@
 // src/lib/api.ts
 import { EDGE_BASE, supabase } from './supabaseClient';
 import { isDemoModeEnabled } from '../demoMode';
-import { demoMetrics, demoRecipesList, demoUsersList } from './demoData';
+import { demoBusiness, demoMetrics, demoRecipesList, demoUsersList } from './demoData';
 
 export type MetricPoint = {
     value: number | null;
@@ -283,6 +283,117 @@ export async function apiRecipeDelete(idRecipe: number) {
         throw new Error(response?.error || 'No se pudo eliminar la receta');
     }
     return r.json();
+}
+
+/* -------- BUSINESS -------- */
+
+export type AgreementStatus = 'planned' | 'active' | 'completed' | 'cancelled';
+export type AgreementPartnerType = 'brand' | 'supermarket' | 'creator' | 'other';
+
+export type CommercialAgreement = {
+    id_commercial_agreement: number;
+    partner_name: string;
+    partner_type: AgreementPartnerType;
+    source_username: string | null;
+    source_platform: 'Instagram' | 'TikTok' | null;
+    starts_on: string;
+    ends_on: string | null;
+    status: AgreementStatus;
+    agreed_amount: number | null;
+    target_reached_users: number | null;
+    target_saves: number | null;
+    currency: string;
+    notes: string | null;
+    created_at: string;
+    updated_at: string;
+};
+
+export type CommercialAgreementInput = Omit<
+    CommercialAgreement,
+    'id_commercial_agreement' | 'created_at' | 'updated_at'
+>;
+
+export type CreatorBusinessMetric = {
+    username: string;
+    platform: 'Instagram' | 'TikTok';
+    reached_users: number;
+    attributed_recipes: number;
+    saves: number;
+    recurrent_users: number;
+    recurrence_rate: number;
+    has_active_agreement: boolean;
+};
+
+export type BusinessResponse = {
+    ok: true;
+    agreements: CommercialAgreement[];
+    creators: CreatorBusinessMetric[];
+    summary: {
+        agreements: number;
+        active_agreements: number;
+        creators: number;
+        attributed_recipes: number;
+        saves: number;
+        reached_users: number;
+    };
+    data_quality: {
+        audience_basis: 'saved_recipes';
+        view_events_available: boolean;
+        unattributed_recipes: number;
+    };
+};
+
+async function businessRequest(method: 'POST' | 'PATCH', payload: Record<string, unknown>) {
+    if (isDemoModeEnabled()) throw new Error('El modo demo es de sólo lectura');
+    const headers = await authHeaders({ 'Content-Type': 'application/json' });
+    const response = await fetch(`${EDGE_BASE}/admin-business`, {
+        method,
+        headers,
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        console.error(`admin-business ${method} failed`, response.status, body);
+        throw new Error(body?.error || 'No se pudo guardar el acuerdo comercial');
+    }
+    return response.json();
+}
+
+export async function apiBusiness(): Promise<BusinessResponse> {
+    if (isDemoModeEnabled()) return demoBusiness();
+    const headers = await authHeaders();
+    const response = await fetch(`${EDGE_BASE}/admin-business`, { method: 'GET', headers });
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        console.error('admin-business GET failed', response.status, body);
+        throw new Error(body?.error || 'No se pudo cargar la información de negocio');
+    }
+    return response.json();
+}
+
+export function apiAgreementCreate(payload: CommercialAgreementInput) {
+    return businessRequest('POST', payload);
+}
+
+export function apiAgreementUpdate(id: number, payload: CommercialAgreementInput) {
+    return businessRequest('PATCH', { id_commercial_agreement: id, ...payload });
+}
+
+export async function apiAgreementDelete(id: number) {
+    if (isDemoModeEnabled()) throw new Error('El modo demo es de sólo lectura');
+    if (!Number.isSafeInteger(id) || id <= 0) throw new Error('El acuerdo no es válido');
+    const headers = await authHeaders();
+    const params = new URLSearchParams({ id: String(id) });
+    const response = await fetch(`${EDGE_BASE}/admin-business?${params.toString()}`, {
+        method: 'DELETE',
+        headers,
+    });
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        console.error('admin-business DELETE failed', response.status, body);
+        throw new Error(body?.error || 'No se pudo eliminar el acuerdo comercial');
+    }
+    return response.json();
 }
 
 /* -------- REPORTS -------- */
